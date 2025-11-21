@@ -1,9 +1,32 @@
 .firebase/
 .DS_Store
-
 .env
+.vscode
 tmp/
 
-# Generated files
-generated.go
-models_gen.go
+# Go
+*.test
+*.out
+go.work
+go.work.sum
+
+# Go build cache
+.cache/
+
+# Go modules
+vendor/
+go.sum
+
+# Test coverage
+*.cover
+coverage.txt
+coverage.html
+
+# Gin
+gin-bin
+*.log
+
+# Build outputs
+/bin/
+/dist/
+/build/
