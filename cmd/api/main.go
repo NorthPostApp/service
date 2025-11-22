@@ -5,15 +5,17 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/north-post/service/internal/transport/http/v1/admin"
 )
 
 func main() {
-	// Create a Gin router with default middleware (logger and recovery)
-	r := gin.Default()
+	router := gin.Default()
+
+	router_v1 := router.Group("/v1")
+	admin.SetupAdminRouters(router_v1)
 
 	// Define a simple GET endpoint
-	r.GET("/ping", func(c *gin.Context) {
-		// Return JSON response
+	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
 		})
@@ -21,7 +23,7 @@ func main() {
 
 	// Start server on port 8080 (default)
 	// Server will listen on 0.0.0.0:8080 (localhost:8080 on Windows)
-	if err := r.Run(); err != nil {
+	if err := router.Run(); err != nil {
 		log.Fatalf("failed to run server: %v", err)
 	}
 }

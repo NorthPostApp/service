@@ -1,4 +1,4 @@
-module north-post
+module github.com/north-post/service
 
 go 1.24.3
 
