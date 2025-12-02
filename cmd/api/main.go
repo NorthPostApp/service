@@ -5,14 +5,24 @@ import (
 	"log"
 	"net/http"
 
+	"north-post/service/internal/firebase"
 	"north-post/service/internal/transport/http/v1/admin"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 const PORT_NUMBER = 8080
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using system environment variable")
+	}
+	// Initialized Firebase
+	if err := firebase.InitializeFirebase(); err != nil {
+		log.Fatalf("Failed to initialize Firebase: %v", err)
+	}
+
 	router := gin.Default()
 	router_v1 := router.Group("/v1")
 

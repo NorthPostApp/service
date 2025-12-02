@@ -1,8 +1,7 @@
 package admin
 
 import (
-	"net/http"
-
+	"north-post/service/internal/transport/http/v1/admin/services"
 	"north-post/service/internal/transport/http/v1/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -13,9 +12,8 @@ func SetupAdminRouters(router *gin.RouterGroup) {
 	admin_router := router.Group("/admin")
 	admin_router.Use(middleware.AdminAuthMiddleware())
 	// register routes
-	admin_router.GET("/check", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "admin connected",
-		})
-	})
+	admin_router.GET("/check", services.HealthCheck)
+
+	// get stored addresses
+	admin_router.POST("/addresses", services.GetAddresses)
 }
