@@ -24,13 +24,15 @@ func NewAddressRepository(client *firestore.Client, logger *slog.Logger) *Addres
 	}
 }
 
-type GetAddressesOptions struct {
+// Get All addresses from the repository
+// TODO: Pagination when the content size is getting larger
+type GetAllAddressesOptions struct {
 	Language string
 	Tags     []string
 	Limit    int
 }
 
-func (r *AddressRepository) GetAll(c context.Context, opts GetAddressesOptions) ([]models.AddressItem, error) {
+func (r *AddressRepository) GetAllAddresses(c context.Context, opts GetAllAddressesOptions) ([]models.AddressItem, error) {
 	collectionName := fmt.Sprintf("%s_%s", addressTablePrefix, opts.Language)
 	query := r.client.Collection(collectionName).Query
 
@@ -72,4 +74,14 @@ func (r *AddressRepository) GetAll(c context.Context, opts GetAddressesOptions) 
 	}
 
 	return addresses, nil
+}
+
+// Get a single address by ID
+type GetAddressByIdOption struct {
+	Language  string
+	AddressID string
+}
+
+func (r *AddressRepository) GetById(c context.Context, opts GetAddressByIdOption) (*models.AddressItem, error) {
+	return nil, nil
 }

@@ -3,8 +3,8 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
-	"north-post/service/internal/transport/http/v1/admin/dto"
-	"north-post/service/internal/transport/http/v1/admin/services"
+	"north-post/service/internal/services"
+	"north-post/service/internal/transport/http/v1/dto"
 
 	"github.com/gin-gonic/gin"
 )

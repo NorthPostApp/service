@@ -9,9 +9,9 @@ import (
 
 	"north-post/service/internal/firebase"
 	"north-post/service/internal/repository"
+	"north-post/service/internal/services"
 	"north-post/service/internal/transport/http/v1/admin"
 	"north-post/service/internal/transport/http/v1/admin/handlers"
-	"north-post/service/internal/transport/http/v1/admin/services"
 	"north-post/service/internal/transport/http/v1/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -40,7 +40,7 @@ func main() {
 
 	addressRepo := repository.NewAddressRepository(firebaseClient.Firestore, logger)
 	addressService := services.NewAddressService(addressRepo)
-	addressHandler := handlers.NewAddressHandler(addressService, logger)
+	adminAddressHandler := handlers.NewAddressHandler(addressService, logger)
 
 	router := gin.Default()
 	router_v1 := router.Group("/v1")
@@ -48,7 +48,7 @@ func main() {
 	adminMiddleware := middleware.AdminAuthMiddleware(logger)
 	admin.SetupAdminRouter(router_v1,
 		&admin.Handlers{
-			Address: addressHandler,
+			Address: adminAddressHandler,
 		},
 		adminMiddleware)
 

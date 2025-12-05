@@ -48,13 +48,13 @@ func (s *AddressService) GetAddresses(ctx context.Context, input GetAddressesInp
 		limit = defaultPageSize
 	}
 
-	opts := repository.GetAddressesOptions{
+	opts := repository.GetAllAddressesOptions{
 		Language: input.Language,
 		Tags:     input.Tags,
 		Limit:    limit,
 	}
 
-	persons, err := s.repo.GetAll(ctx, opts)
+	persons, err := s.repo.GetAllAddresses(ctx, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get addresses: %w", err)
 	}
