@@ -11,30 +11,52 @@ type GetAllAddressesRequest struct {
 }
 
 type GetAllAddressResponse struct {
-	Data  []AddressDTO `json:"data"`
-	Count int          `json:"count"`
+	Data  []AddressItemDTO `json:"data"`
+	Count int              `json:"count"`
+}
+
+type AddressItemDTO struct {
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	BriefIntro string     `json:"briefIntro"`
+	Tags       []string   `json:"tags"`
+	Address    AddressDTO `json:"address"`
 }
 
 type AddressDTO struct {
-	ID         string   `json:"id"`
-	Name       string   `json:"name"`
-	BriefIntro string   `json:"briefIntro"`
-	Tags       []string `json:"tags" firestore:"tags"`
+	City         string `json:"city"`
+	Country      string `json:"country"`
+	Line1        string `json:"line1"`
+	Line2        string `json:"line2,omitempty"`
+	BuildingName string `json:"buildingName,omitempty"`
+	PostalCode   string `json:"postalCode"`
+	Region       string `json:"region"`
 }
 
-func ToAddressDTO(address models.AddressItem) AddressDTO {
-	return AddressDTO{
-		ID:         address.ID,
-		Name:       address.Name,
-		BriefIntro: address.BriefIntro,
-		Tags:       address.Tags,
+func ToAddressDTO(addressItem models.AddressItem) AddressItemDTO {
+	address := addressItem.Address
+	addressDto := AddressDTO{
+		City:         address.City,
+		Country:      address.Country,
+		Line1:        address.Line1,
+		Line2:        address.Line2,
+		BuildingName: address.BuildingName,
+		PostalCode:   address.PostalCode,
+		Region:       address.Region,
+	}
+	return AddressItemDTO{
+		ID:         addressItem.ID,
+		Name:       addressItem.Name,
+		BriefIntro: addressItem.BriefIntro,
+		Tags:       addressItem.Tags,
+		Address:    addressDto,
 	}
 }
 
-func ToAddressDTOs(addresses []models.AddressItem) []AddressDTO {
-	output := make([]AddressDTO, len(addresses))
-	for i, address := range addresses {
-		output[i] = ToAddressDTO(address)
+func ToAddressDTOs(addresses []models.AddressItem) []AddressItemDTO {
+	output := make([]AddressItemDTO, len(addresses))
+	for i, addressItem := range addresses {
+		output[i] = ToAddressDTO(addressItem)
 	}
 	return output
 }

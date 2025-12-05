@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"net/http"
 	"north-post/service/internal/transport/http/v1/admin/handlers"
 
 	"github.com/gin-gonic/gin"
@@ -17,5 +18,11 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.
 		{
 			addresses.POST("", h.Address.GetAddresses)
 		}
+		// health check
+		admin.GET("/healthcheck", func(c *gin.Context) {
+			c.JSON(http.StatusOK, gin.H{
+				"message": "admin connected",
+			})
+		})
 	}
 }
