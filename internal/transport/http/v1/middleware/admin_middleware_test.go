@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -20,6 +21,7 @@ func init() {
 func setupTestContext(authHeader string) (
 	*gin.Context,
 	*httptest.ResponseRecorder,
+	*slog.Logger,
 	*bytes.Buffer,
 ) {
 	w := httptest.NewRecorder() // w stands for writer/recorder
@@ -32,8 +34,8 @@ func setupTestContext(authHeader string) (
 	c.Request = req
 	// capture log output
 	var logBuffer bytes.Buffer
-	log.SetOutput(&logBuffer)
-	return c, w, &logBuffer
+	logger := slog.New(slog.NewTextHandler(&logBuffer, nil))
+	return c, w, logger, &logBuffer
 }
 
 func teardownTest() {
@@ -41,10 +43,10 @@ func teardownTest() {
 }
 
 func TestAdminAuthMiddleware_MissingAuthorizationHeader(t *testing.T) {
-	c, w, logBuffer := setupTestContext("")
+	c, w, logger, logBuffer := setupTestContext("")
 	defer teardownTest()
 
-	middleware := AdminAuthMiddleware()
+	middleware := AdminAuthMiddleware(logger)
 	middleware(c)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -56,16 +58,15 @@ func TestAdminAuthMiddleware_MissingAuthorizationHeader(t *testing.T) {
 	assert.Equal(t, "Authorization header required.", response["error"])
 
 	logOutput := logBuffer.String()
-	assert.Contains(t, logOutput, AUTH_LOG_PREFIX)
-	assert.Contains(t, logOutput, "Invalid request")
+	assert.Contains(t, logOutput, "Invalid admin request")
 	assert.Contains(t, logOutput, "Authorization header required.")
 }
 
 func TestAdminAuthMiddleware_InvalidFormat_NoBearerPrefix(t *testing.T) {
-	c, w, logBuffer := setupTestContext("InvalidToken123")
+	c, w, logger, logBuffer := setupTestContext("InvalidToken123")
 	defer teardownTest()
 
-	middleware := AdminAuthMiddleware()
+	middleware := AdminAuthMiddleware(logger)
 	middleware(c)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -77,15 +78,14 @@ func TestAdminAuthMiddleware_InvalidFormat_NoBearerPrefix(t *testing.T) {
 	assert.Contains(t, response["error"], "Authorization header format must be Bearer")
 
 	logOutput := logBuffer.String()
-	assert.Contains(t, logOutput, AUTH_LOG_PREFIX)
-	assert.Contains(t, logOutput, "Invalid header")
+	assert.Contains(t, logOutput, "Invalid authorization header")
 }
 
 func TestAdminAuthMiddleware_InvalidHeader(t *testing.T) {
-	c, w, logBuffer := setupTestContext("Basic token123")
+	c, w, logger, logBuffer := setupTestContext("Basic token123")
 	defer teardownTest()
 
-	middleware := AdminAuthMiddleware()
+	middleware := AdminAuthMiddleware(logger)
 	middleware(c)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -97,19 +97,19 @@ func TestAdminAuthMiddleware_InvalidHeader(t *testing.T) {
 	assert.Contains(t, response["error"], "Authorization header format must be Bearer")
 
 	logOutput := logBuffer.String()
-	assert.Contains(t, logOutput, AUTH_LOG_PREFIX)
-	assert.Contains(t, logOutput, "Invalid header")
+	assert.Contains(t, logOutput, "Invalid authorization header")
 }
 
 func TestAdminAuthMiddleware_ValidFormat(t *testing.T) {
-	c, w, logBuffer := setupTestContext("Bearer valid_token")
+	c, w, logger, logBuffer := setupTestContext("Bearer valid_token")
 	defer teardownTest()
 
-	middleware := AdminAuthMiddleware()
+	middleware := AdminAuthMiddleware(logger)
 	middleware(c)
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.False(t, c.IsAborted())
 
 	logOutput := logBuffer.String()
-	assert.NotContains(t, logOutput, AUTH_LOG_PREFIX)
+	assert.NotContains(t, logOutput, "Invalid admin request")
+	assert.NotContains(t, logOutput, "Invalid authorization header")
 }

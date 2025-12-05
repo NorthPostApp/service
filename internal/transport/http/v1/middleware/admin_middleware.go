@@ -2,23 +2,21 @@ package middleware
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-const AUTH_LOG_PREFIX = "[ADMIN-LOGIN]"
-
-func AdminAuthMiddleware() gin.HandlerFunc {
+func AdminAuthMiddleware(logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		clientIP := c.ClientIP()
 		// check if the auth header exists
 		if authHeader == "" {
 			err := "Authorization header required."
-			log.Printf("%s Invalid request | IP: %s | Error: %v", AUTH_LOG_PREFIX, clientIP, err)
+			logger.Error("Invalid admin request", "error", err, "ip", clientIP)
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": err,
 			})
@@ -30,7 +28,7 @@ func AdminAuthMiddleware() gin.HandlerFunc {
 		headerParts := strings.Split(authHeader, " ")
 		if len(headerParts) != 2 || headerParts[0] != "Bearer" {
 			err := fmt.Sprintf("Authorization header format must be Bearer {token}, got=%s", headerParts[0])
-			log.Printf("%s Invalid header | IP: %s | Error: %v", AUTH_LOG_PREFIX, clientIP, err)
+			logger.Error("Invalid authorization header", "error", err, "clientIP", clientIP)
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": err,
 			})

@@ -3,32 +3,46 @@ package firebase
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/option"
 )
 
-var (
-	FirestoreClient *firestore.Client
-)
+type FirebaseClient struct {
+	Firestore *firestore.Client
+}
 
-func InitializeFirebase() error {
+func NewFirebaseClient(logger *slog.Logger) (*FirebaseClient, error) {
 	ctx := context.Background()
 	credentialsPath := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 	projectID := os.Getenv("GOOGLE_PROJECT_ID")
-	if credentialsPath == "" {
-		log.Println("[Firebase] Warning: Using Application Default Credentials")
+	if projectID == "" {
+		return nil, fmt.Errorf("GOOGLE_PROJECT_ID environment variable is required")
+	}
+
+	var opts []option.ClientOption
+	if credentialsPath != "" {
+		logger.Info("initializing firebase client using credentials file")
+		opts = append(opts, option.WithCredentialsFile(credentialsPath))
 	} else {
-		log.Println("[Firebase] Using local Credentials file")
+		logger.Info("initializing firebase using application default credentials")
 	}
-	opt := option.WithCredentialsFile(credentialsPath)
-	client, err := firestore.NewClient(ctx, projectID, opt)
+	client, err := firestore.NewClient(ctx, projectID, opts...)
 	if err != nil {
-		return fmt.Errorf("error initializing app: %v", err)
+		return nil, fmt.Errorf("error initializing firestore: %w", err)
 	}
-	FirestoreClient = client
-	log.Println(("[Firebase] Successfully initialized"))
+	logger.Info("firebase initialized successfully")
+
+	return &FirebaseClient{
+		Firestore: client,
+	}, nil
+}
+
+func (f *FirebaseClient) Close() error {
+	if f.Firestore != nil {
+		return f.Firestore.Close()
+	}
 	return nil
 }
