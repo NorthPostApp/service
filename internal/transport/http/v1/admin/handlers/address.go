@@ -23,6 +23,17 @@ func NewAddressHandler(service *services.AddressService, logger *slog.Logger) *A
 	}
 }
 
+// GetAddresses godoc
+// @Summary Get all addresses
+// @Description Get all addresses by language and optional tag filters
+// @Tags Admin Address
+// @Accept json
+// @Produce json
+// @Param request body dto.GetAllAddressesRequest true "Request body"
+// @Success 200 {object} dto.GetAllAddressResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /admin/address [post]
 func (h *AddressHandler) GetAddresses(c *gin.Context) {
 	var req dto.GetAllAddressesRequest
 	if !utils.BindJSON(c, &req, h.logger) {
@@ -49,6 +60,18 @@ func (h *AddressHandler) GetAddresses(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetAddressById godoc
+// @Summary Get address by ID
+// @Description Get a single address by ID with language query parameter
+// @Tags Admin Address
+// @Accept json
+// @Produce json
+// @Param id path string true "Address ID"
+// @Param language query string true "Language code (e.g., en, zh)"
+// @Success 200 {object} dto.GetAddressByIdResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /admin/address/{id} [get]
 func (h *AddressHandler) GetAddressById(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {

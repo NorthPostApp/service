@@ -10,11 +10,16 @@ import (
 
 const defaultPageSize = 100
 
-type AddressService struct {
-	repo *repository.AddressRepository
+type addressRepository interface {
+	GetAllAddresses(context.Context, repository.GetAllAddressesOptions) ([]models.AddressItem, error)
+	GetAddressById(context.Context, repository.GetAddressByIdOption) (*models.AddressItem, error)
 }
 
-func NewAddressService(repo *repository.AddressRepository) *AddressService {
+type AddressService struct {
+	repo addressRepository
+}
+
+func NewAddressService(repo addressRepository) *AddressService {
 	return &AddressService{
 		repo: repo,
 	}
@@ -40,14 +45,6 @@ type GetAddressByIdOutput struct {
 	Address models.AddressItem
 }
 
-// GetAddresses godoc
-// @Summary Get all addresses
-// @Description Get all addresses by language and filtered optional tags
-// @Param request body dto.GetAddressesRequest true "Request body"
-// @Success 200 {object} dto.GetAddressesResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /api/v1/admin/addresses [post]
 func (s *AddressService) GetAddresses(ctx context.Context, input GetAddressesInput) (*GetAddressesOutput, error) {
 	limit := input.Limit
 	if limit <= 0 || limit > defaultPageSize {
@@ -67,8 +64,8 @@ func (s *AddressService) GetAddresses(ctx context.Context, input GetAddressesInp
 
 func (s *AddressService) GetAddressById(ctx context.Context, input GetAddressByIdInput) (*GetAddressByIdOutput, error) {
 	opts := repository.GetAddressByIdOption{
-		Language:  input.Language,
-		AddressID: input.ID,
+		Language: input.Language,
+		ID:       input.ID,
 	}
 	address, err := s.repo.GetAddressById(ctx, opts)
 	if err != nil {

@@ -31,8 +31,8 @@ type GetAllAddressesOptions struct {
 }
 
 type GetAddressByIdOption struct {
-	Language  models.Language
-	AddressID string
+	Language models.Language
+	ID       string
 }
 
 // Get All addresses from the repository
@@ -78,17 +78,17 @@ func (r *AddressRepository) GetAllAddresses(ctx context.Context, opts GetAllAddr
 // Get a address by ID
 func (r *AddressRepository) GetAddressById(ctx context.Context, opts GetAddressByIdOption) (*models.AddressItem, error) {
 	collectionName := getCollectionName(addressTablePrefix, opts.Language)
-	docRef := r.client.Collection(collectionName).Doc(opts.AddressID)
+	docRef := r.client.Collection(collectionName).Doc(opts.ID)
 	// get document
 	doc, err := docRef.Get(ctx)
 	if err != nil {
-		r.logger.Error("failed to get address document", "addressID", opts.AddressID, "error", err)
-		return nil, fmt.Errorf("failed to get address with ID %s: %w", opts.AddressID, err)
+		r.logger.Error("failed to get address document", "addressID", opts.ID, "error", err)
+		return nil, fmt.Errorf("failed to get address with ID %s: %w", opts.ID, err)
 	}
 	// parse data
 	var address models.AddressItem
 	if err := doc.DataTo(&address); err != nil {
-		r.logger.Error("failed to parse address document", "addressID", opts.AddressID, "error", err)
+		r.logger.Error("failed to parse address document", "addressID", opts.ID, "error", err)
 		return nil, fmt.Errorf("failed to parse address data: %w", err)
 	}
 	return &address, nil
