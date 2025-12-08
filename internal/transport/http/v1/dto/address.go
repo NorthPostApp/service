@@ -19,6 +19,18 @@ type GetAddressByIdResponse struct {
 	Data AddressItemDTO `json:"data"`
 }
 
+type CreateAddressRequest struct {
+	Language   models.Language `json:"language" binding:"required"`
+	Name       string          `json:"name" binding:"required"`
+	BriefIntro string          `json:"briefIntro" binding:"required"`
+	Tags       []string        `json:"tags" binding:"required"`
+	Address    AddressDTO      `json:"address" binding:"required"`
+}
+
+type CreateAddressResponse struct {
+	ID string `json:"id"`
+}
+
 type AddressItemDTO struct {
 	ID         string     `json:"id"`
 	Name       string     `json:"name"`
@@ -28,13 +40,13 @@ type AddressItemDTO struct {
 }
 
 type AddressDTO struct {
-	City         string `json:"city"`
-	Country      string `json:"country"`
-	Line1        string `json:"line1"`
+	City         string `json:"city" binding:"required"`
+	Country      string `json:"country" binding:"required"`
+	Line1        string `json:"line1" binding:"required"`
 	Line2        string `json:"line2,omitempty"`
 	BuildingName string `json:"buildingName,omitempty"`
-	PostalCode   string `json:"postalCode"`
-	Region       string `json:"region"`
+	PostalCode   string `json:"postalCode" binding:"required"`
+	Region       string `json:"region" binding:"required"`
 }
 
 func ToAddressDTO(addressItem models.AddressItem) AddressItemDTO {
@@ -63,4 +75,21 @@ func ToAddressDTOs(addresses []models.AddressItem) []AddressItemDTO {
 		output[i] = ToAddressDTO(addressItem)
 	}
 	return output
+}
+
+func FromCreateAddressDTO(req CreateAddressRequest) models.AddressItem {
+	return models.AddressItem{
+		Name:       req.Name,
+		BriefIntro: req.BriefIntro,
+		Tags:       req.Tags,
+		Address: models.Address{
+			Country:      req.Address.Country,
+			City:         req.Address.City,
+			Line1:        req.Address.Line1,
+			Line2:        req.Address.Line2,
+			BuildingName: req.Address.BuildingName,
+			PostalCode:   req.Address.PostalCode,
+			Region:       req.Address.Region,
+		},
+	}
 }

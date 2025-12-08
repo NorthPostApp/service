@@ -14,8 +14,8 @@ type Address struct {
 	City         string `json:"city" firestore:"city"`
 	Country      string `json:"country" firestore:"country"`
 	Line1        string `json:"line1" firestore:"line1"`
-	Line2        string `json:"line2,omitempty" firestore:"line2,omitempty"`
-	BuildingName string `json:"buildingName,omitempty" firestore:"buildingName,omitempty"`
+	Line2        string `json:"line2,omitempty" firestore:"line2"`
+	BuildingName string `json:"buildingName,omitempty" firestore:"buildingName"`
 	PostalCode   string `json:"postalCode" firestore:"postalCode"`
 	Region       string `json:"region" firestore:"region"`
 }
