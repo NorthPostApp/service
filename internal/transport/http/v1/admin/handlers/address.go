@@ -104,3 +104,38 @@ func (h *AddressHandler) GetAddressById(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, response)
 }
+
+// CreateNewAddress godoc
+// @Summary Create a new address
+// @Description Create a new address entry with language-specific information
+// @Tags Admin Address
+// @Accept json
+// @Produce json
+// @Param request body dto.CreateAddressRequest true "Request body"
+// @Success 200 {object} dto.CreateAddressResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /admin/address [put]
+func (h *AddressHandler) CreateNewAddress(c *gin.Context) {
+	var req dto.CreateAddressRequest
+	if !utils.BindJSON(c, &req, h.logger) {
+		return
+	}
+	if !utils.ValidateLanguage(c, req.Language, h.logger) {
+		return
+	}
+	input := services.CreateNewAddressInput{
+		Language: req.Language,
+		Address:  dto.FromCreateAddressDTO(req),
+	}
+	output, err := h.service.CreateNewAddress(c.Request.Context(), input)
+	if err != nil {
+		h.logger.Error("failed to create new address", "address", req, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create new address"})
+		return
+	}
+	response := dto.CreateAddressResponse{
+		ID: output.ID,
+	}
+	c.JSON(http.StatusOK, response)
+}

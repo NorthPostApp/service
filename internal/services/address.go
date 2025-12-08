@@ -13,6 +13,7 @@ const defaultPageSize = 100
 type addressRepository interface {
 	GetAllAddresses(context.Context, repository.GetAllAddressesOptions) ([]models.AddressItem, error)
 	GetAddressById(context.Context, repository.GetAddressByIdOption) (*models.AddressItem, error)
+	CreateNewAddress(context.Context, repository.CreateNewAddressOption) (string, error)
 }
 
 type AddressService struct {
@@ -45,6 +46,15 @@ type GetAddressByIdOutput struct {
 	Address models.AddressItem
 }
 
+type CreateNewAddressInput struct {
+	Language models.Language
+	Address  models.AddressItem
+}
+
+type CreateNewAddressOutput struct {
+	ID string
+}
+
 func (s *AddressService) GetAddresses(ctx context.Context, input GetAddressesInput) (*GetAddressesOutput, error) {
 	limit := input.Limit
 	if limit <= 0 || limit > defaultPageSize {
@@ -72,4 +82,16 @@ func (s *AddressService) GetAddressById(ctx context.Context, input GetAddressByI
 		return nil, fmt.Errorf("failed to get address: %w", err)
 	}
 	return &GetAddressByIdOutput{Address: *address}, nil
+}
+
+func (s *AddressService) CreateNewAddress(ctx context.Context, input CreateNewAddressInput) (*CreateNewAddressOutput, error) {
+	opts := repository.CreateNewAddressOption{
+		Language:    input.Language,
+		AddressItem: input.Address,
+	}
+	id, err := s.repo.CreateNewAddress(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create new address: %w", err)
+	}
+	return &CreateNewAddressOutput{ID: id}, nil
 }

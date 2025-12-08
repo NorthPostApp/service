@@ -16,8 +16,11 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.
 	{
 		address := admin.Group("/address")
 		{
-			address.POST("", h.Address.GetAddresses)
 			address.GET("/:id", h.Address.GetAddressById)
+
+			address.POST("", h.Address.GetAddresses)
+
+			address.PUT("/new", h.Address.CreateNewAddress)
 		}
 		// health check
 		admin.GET("/healthcheck", func(c *gin.Context) {

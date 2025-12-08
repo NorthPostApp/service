@@ -35,6 +35,14 @@ func (m *mockAddressRepository) GetAddressById(ctx context.Context, opts reposit
 	return address, args.Error(1)
 }
 
+func (m *mockAddressRepository) CreateNewAddress(ctx context.Context, opts repository.CreateNewAddressOption) (string, error) {
+	args := m.Called(ctx, opts)
+	if args.Get(0) == nil {
+		return "", args.Error(1)
+	}
+	return args.String(0), args.Error(1)
+}
+
 // Tests
 func TestAddressService_GetAddresses(t *testing.T) {
 	t.Parallel()
@@ -218,4 +226,43 @@ func TestAddressService_GetAddressById_Error(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, output)
 	assert.ErrorContains(t, err, "failed to get address")
+}
+
+func TestAddressService_CreateNewAddress(t *testing.T) {
+	t.Parallel()
+	repo := new(mockAddressRepository)
+	service := NewAddressService(repo)
+	expectedID := "expected_id"
+	input := CreateNewAddressInput{
+		Language: models.LanguageZH,
+		Address:  models.AddressItem{Name: "test", ID: "test"},
+	}
+	repo.On("CreateNewAddress",
+		mock.Anything,
+		mock.Anything,
+	).Return(expectedID, nil).Once()
+	output, err := service.CreateNewAddress(context.Background(), input)
+	repo.AssertExpectations(t)
+	assert.NoError(t, err)
+	assert.NotNil(t, output)
+	assert.Equal(t, output.ID, expectedID)
+}
+
+func TestAddressService_CreateNewAddress_Error(t *testing.T) {
+	t.Parallel()
+	repo := new(mockAddressRepository)
+	service := NewAddressService(repo)
+	input := CreateNewAddressInput{
+		Language: models.LanguageZH,
+		Address:  models.AddressItem{Name: "test", ID: "test"},
+	}
+	repo.On("CreateNewAddress",
+		mock.Anything,
+		mock.Anything,
+	).Return(nil, assert.AnError).Once()
+	output, err := service.CreateNewAddress(context.Background(), input)
+	repo.AssertExpectations(t)
+	assert.Error(t, err)
+	assert.Nil(t, output)
+	assert.ErrorContains(t, err, "failed to create new address")
 }

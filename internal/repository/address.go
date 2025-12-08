@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"north-post/service/internal/domain/v1/models"
+	"time"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
@@ -33,6 +34,11 @@ type GetAllAddressesOptions struct {
 type GetAddressByIdOption struct {
 	Language models.Language
 	ID       string
+}
+
+type CreateNewAddressOption struct {
+	Language    models.Language
+	AddressItem models.AddressItem
 }
 
 // Get All addresses from the repository
@@ -92,6 +98,24 @@ func (r *AddressRepository) GetAddressById(ctx context.Context, opts GetAddressB
 		return nil, fmt.Errorf("failed to parse address data: %w", err)
 	}
 	return &address, nil
+}
+
+// Create a new address
+func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNewAddressOption) (string, error) {
+	collectionName := getCollectionName(addressTablePrefix, opts.Language)
+	// Auto generate timestamp
+	now := time.Now().Unix()
+	opts.AddressItem.CreatedAt = now
+	opts.AddressItem.UpdatedAt = now
+	// Create document with auto-generated ID
+	docRef := r.client.Collection(collectionName).NewDoc()
+	opts.AddressItem.ID = docRef.ID
+	_, err := docRef.Set(ctx, opts.AddressItem)
+	if err != nil {
+		r.logger.Error("failed to create address", "error", err)
+		return "", fmt.Errorf("failed to create address: %w", err)
+	}
+	return docRef.ID, nil
 }
 
 // =========== Helper functions ==========
