@@ -14,6 +14,7 @@ import (
 	"north-post/service/internal/transport/http/v1/admin/handlers"
 	"north-post/service/internal/transport/http/v1/middleware"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -43,6 +44,13 @@ func main() {
 	adminAddressHandler := handlers.NewAddressHandler(addressService, logger)
 
 	router := gin.Default()
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
 	router_v1 := router.Group("/v1")
 
 	adminMiddleware := middleware.AdminAuthMiddleware(logger)
