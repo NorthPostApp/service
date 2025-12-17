@@ -96,7 +96,7 @@ func (h *AddressHandler) GetAddressById(c *gin.Context) {
 	output, err := h.service.GetAddressById(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to get address", "addressId", input.ID, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch address"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	response := dto.GetAddressByIdResponse{
@@ -131,7 +131,7 @@ func (h *AddressHandler) CreateNewAddress(c *gin.Context) {
 	output, err := h.service.CreateNewAddress(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to create new address", "address", req, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create new address"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	response := dto.CreateAddressResponse{

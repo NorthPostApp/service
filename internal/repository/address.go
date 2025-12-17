@@ -5,13 +5,18 @@ import (
 	"fmt"
 	"log/slog"
 	"north-post/service/internal/domain/v1/models"
+	"slices"
 	"time"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
 )
 
-const addressTablePrefix = "addresses"
+const (
+	addressTablePrefix  = "addresses"
+	getByNameLimit      = 10
+	tagsSimilarityLimit = 0.6
+)
 
 type AddressRepository struct {
 	client *firestore.Client
@@ -31,10 +36,16 @@ type GetAllAddressesOptions struct {
 	Limit    int
 }
 
-type GetAddressByIdOption struct {
+type GetAddressByIdOptions struct {
 	Language models.Language
 	ID       string
 }
+
+// type GetAddressesByNameOptions struct {
+// 	Language models.Language
+// 	Name     string
+// 	Limit    int
+// }
 
 type CreateNewAddressOption struct {
 	Language    models.Language
@@ -44,7 +55,7 @@ type CreateNewAddressOption struct {
 // Get All addresses from the repository
 // TODO: Pagination when the content size is getting larger
 func (r *AddressRepository) GetAllAddresses(ctx context.Context, opts GetAllAddressesOptions) ([]models.AddressItem, error) {
-	collectionName := getCollectionName(addressTablePrefix, opts.Language)
+	collectionName := getCollectionName(opts.Language)
 	query := r.client.Collection(collectionName).Query
 	// Apply filters
 	if len(opts.Tags) > 0 {
@@ -82,14 +93,14 @@ func (r *AddressRepository) GetAllAddresses(ctx context.Context, opts GetAllAddr
 }
 
 // Get a address by ID
-func (r *AddressRepository) GetAddressById(ctx context.Context, opts GetAddressByIdOption) (*models.AddressItem, error) {
-	collectionName := getCollectionName(addressTablePrefix, opts.Language)
+func (r *AddressRepository) GetAddressById(ctx context.Context, opts GetAddressByIdOptions) (*models.AddressItem, error) {
+	collectionName := getCollectionName(opts.Language)
 	docRef := r.client.Collection(collectionName).Doc(opts.ID)
 	// get document
 	doc, err := docRef.Get(ctx)
 	if err != nil {
 		r.logger.Error("failed to get address document", "addressID", opts.ID, "error", err)
-		return nil, fmt.Errorf("failed to get address with ID %s: %w", opts.ID, err)
+		return nil, fmt.Errorf("failed to get address with ID %s", opts.ID)
 	}
 	// parse data
 	var address models.AddressItem
@@ -100,9 +111,36 @@ func (r *AddressRepository) GetAddressById(ctx context.Context, opts GetAddressB
 	return &address, nil
 }
 
+// TODO
+// Get addresses by name - next step
+// func (r *AddressRepository) GetAddressByName(ctx context.Context, opt)
+
 // Create a new address
 func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNewAddressOption) (string, error) {
-	collectionName := getCollectionName(addressTablePrefix, opts.Language)
+	collectionName := getCollectionName(opts.Language)
+	// first check if there exists data with the same name
+	query := r.client.Collection(collectionName).Where("name", "==", opts.AddressItem.Name).Limit(getByNameLimit)
+	iter := query.Documents(ctx)
+	defer iter.Stop()
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			r.logger.Error("failed to check for duplicate records", "error", err)
+			return "", fmt.Errorf("failed to check for duplicate records: %w", err)
+		}
+		var existingAddress models.AddressItem
+		if err := doc.DataTo(&existingAddress); err != nil {
+			r.logger.Warn("failed to parse existing address", "docID", doc.Ref.ID, "error", err)
+			continue
+		}
+		similarity := compareTags(opts.AddressItem.Tags, existingAddress.Tags)
+		if similarity > tagsSimilarityLimit {
+			return "", fmt.Errorf("address with name '%s' and similar tags (%.0f%% similarity) already exists", opts.AddressItem.Name, similarity*100)
+		}
+	}
 	// Auto generate timestamp
 	now := time.Now().Unix()
 	opts.AddressItem.CreatedAt = now
@@ -119,6 +157,16 @@ func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNew
 }
 
 // =========== Helper functions ==========
-func getCollectionName(tablePrefix string, language models.Language) string {
-	return fmt.Sprintf("%s_%s", tablePrefix, language.Get())
+func getCollectionName(language models.Language) string {
+	return fmt.Sprintf("%s_%s", addressTablePrefix, language.Get())
+}
+
+func compareTags(tagsNewItem []string, tagsExistingItem []string) float32 {
+	sameTagCount := 0
+	for _, tag := range tagsNewItem {
+		if exists := slices.Contains(tagsExistingItem, tag); exists {
+			sameTagCount += 1
+		}
+	}
+	return float32(sameTagCount) / float32(len(tagsNewItem))
 }

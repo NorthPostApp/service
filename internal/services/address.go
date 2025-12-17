@@ -12,7 +12,7 @@ const defaultPageSize = 100
 
 type addressRepository interface {
 	GetAllAddresses(context.Context, repository.GetAllAddressesOptions) ([]models.AddressItem, error)
-	GetAddressById(context.Context, repository.GetAddressByIdOption) (*models.AddressItem, error)
+	GetAddressById(context.Context, repository.GetAddressByIdOptions) (*models.AddressItem, error)
 	CreateNewAddress(context.Context, repository.CreateNewAddressOption) (string, error)
 }
 
@@ -67,19 +67,19 @@ func (s *AddressService) GetAddresses(ctx context.Context, input GetAddressesInp
 	}
 	addresses, err := s.repo.GetAllAddresses(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get addresses: %w", err)
+		return nil, fmt.Errorf("%w", err)
 	}
 	return &GetAddressesOutput{Addresses: addresses, Count: len(addresses)}, nil
 }
 
 func (s *AddressService) GetAddressById(ctx context.Context, input GetAddressByIdInput) (*GetAddressByIdOutput, error) {
-	opts := repository.GetAddressByIdOption{
+	opts := repository.GetAddressByIdOptions{
 		Language: input.Language,
 		ID:       input.ID,
 	}
 	address, err := s.repo.GetAddressById(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get address: %w", err)
+		return nil, fmt.Errorf("%w", err)
 	}
 	return &GetAddressByIdOutput{Address: *address}, nil
 }
@@ -91,7 +91,7 @@ func (s *AddressService) CreateNewAddress(ctx context.Context, input CreateNewAd
 	}
 	id, err := s.repo.CreateNewAddress(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create new address: %w", err)
+		return nil, fmt.Errorf("%w", err)
 	}
 	return &CreateNewAddressOutput{ID: id}, nil
 }
