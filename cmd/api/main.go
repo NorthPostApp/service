@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"north-post/service/internal/firebase"
+	"north-post/service/internal/infra"
 	"north-post/service/internal/repository"
 	"north-post/service/internal/services"
 	"north-post/service/internal/transport/http/v1/admin"
@@ -29,7 +29,7 @@ func main() {
 	}
 
 	// Initialize Firebase client
-	firebaseClient, err := firebase.NewFirebaseClient(logger)
+	firebaseClient, err := infra.NewFirebaseClient(logger)
 	if err != nil {
 		log.Fatalf("failed to initialize firebase: %v", err)
 	}
@@ -39,8 +39,11 @@ func main() {
 		}
 	}()
 
+	// Initialize LLM client
+	llmClient, err := infra.NewLLMClient(logger)
+
 	addressRepo := repository.NewAddressRepository(firebaseClient.Firestore, logger)
-	addressService := services.NewAddressService(addressRepo)
+	addressService := services.NewAddressService(addressRepo, llmClient)
 	adminAddressHandler := handlers.NewAddressHandler(addressService, logger)
 
 	router := gin.Default()
