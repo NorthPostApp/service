@@ -139,3 +139,26 @@ func (h *AddressHandler) CreateNewAddress(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, response)
 }
+
+func (h *AddressHandler) GenerateNewAddress(c *gin.Context) {
+	var req dto.GenerateNewAddressRequest
+	if !utils.BindJSON(c, &req, h.logger) {
+		return
+	}
+	if !utils.ValidateLanguage(c, req.Language, h.logger) {
+		return
+	}
+	input := services.GenerateAddressInput{
+		Language: req.Language,
+		Prompt:   req.Prompt,
+		Model:    req.Model,
+	}
+	output, err := h.service.GenerateNewAddress(c.Request.Context(), input)
+	if err != nil {
+		h.logger.Error("failed to generate new address", "request", req, "error", err)
+	}
+	response := dto.GenerateNewAddressResponse{
+		Data: dto.ToAddressDTO(output.Address),
+	}
+	c.JSON(http.StatusOK, response)
+}

@@ -5,7 +5,10 @@ import (
 	"fmt"
 
 	"north-post/service/internal/domain/v1/models"
+	"north-post/service/internal/infra"
 	"north-post/service/internal/repository"
+
+	"github.com/openai/openai-go/v3"
 )
 
 const defaultPageSize = 100
@@ -18,11 +21,13 @@ type addressRepository interface {
 
 type AddressService struct {
 	repo addressRepository
+	llm  *infra.LLMClient
 }
 
-func NewAddressService(repo addressRepository) *AddressService {
+func NewAddressService(repo addressRepository, llm *infra.LLMClient) *AddressService {
 	return &AddressService{
 		repo: repo,
+		llm:  llm,
 	}
 }
 
@@ -53,6 +58,17 @@ type CreateNewAddressInput struct {
 
 type CreateNewAddressOutput struct {
 	ID string
+}
+
+type GenerateAddressInput struct {
+	Prompt   string
+	Language models.Language
+	Model    openai.ChatModel
+	// Temperature *float64 // might be useful in the future
+}
+
+type GenerateAddressOutput struct {
+	Address models.AddressItem
 }
 
 func (s *AddressService) GetAddresses(ctx context.Context, input GetAddressesInput) (*GetAddressesOutput, error) {
@@ -94,4 +110,36 @@ func (s *AddressService) CreateNewAddress(ctx context.Context, input CreateNewAd
 		return nil, fmt.Errorf("%w", err)
 	}
 	return &CreateNewAddressOutput{ID: id}, nil
+}
+
+func (s *AddressService) GenerateNewAddress(ctx context.Context, input GenerateAddressInput) (*GenerateAddressOutput, error) {
+	// validate input
+	if input.Prompt == "" {
+		return nil, fmt.Errorf("prompt cannot be empty")
+	}
+	// set default model if not provided
+	model := input.Model
+	if model == "" {
+		model = openai.ChatModelGPT5Mini
+	}
+	// configure structured completion options
+	opts := infra.StructuredCompletionOptions{
+		Prompt:      input.Prompt,
+		SchemaName:  "address_generation",
+		Description: "Generate a structured address with metadata",
+		Model:       model,
+		// may insert temperature field here in the future
+	}
+	schema := models.AddressGenerationSchema{}
+	result, err := infra.StructuredCompletion(ctx, s.llm, opts, schema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate address: %w", err)
+	}
+	addressItem := models.AddressItem{
+		Name:       result.Name,
+		BriefIntro: result.BriefIntro,
+		Tags:       result.Tags,
+		Address:    result.Address,
+	}
+	return &GenerateAddressOutput{Address: addressItem}, nil
 }

@@ -11,7 +11,7 @@ import (
 func BindJSON(c *gin.Context, req interface{}, logger *slog.Logger) bool {
 	if err := c.ShouldBindJSON(req); err != nil {
 		logger.Error("invalid request body", "error", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request parameters"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return false
 	}
 	return true

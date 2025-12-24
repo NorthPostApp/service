@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"north-post/service/internal/domain/v1/models"
+	"north-post/service/internal/infra"
 	"north-post/service/internal/repository"
 
 	"github.com/stretchr/testify/assert"
@@ -15,6 +16,11 @@ import (
 // Mock repository implementations
 type mockAddressRepository struct {
 	mock.Mock
+}
+
+type mockLLMClient struct {
+	mock.Mock
+	infra.LLMClient
 }
 
 func (m *mockAddressRepository) GetAllAddresses(ctx context.Context, opts repository.GetAllAddressesOptions) ([]models.AddressItem, error) {
@@ -43,11 +49,17 @@ func (m *mockAddressRepository) CreateNewAddress(ctx context.Context, opts repos
 	return args.String(0), args.Error(1)
 }
 
+func setupAddressService() (*AddressService, *mockAddressRepository, *mockLLMClient) {
+	repo := new(mockAddressRepository)
+	llm := new(mockLLMClient)
+	service := NewAddressService(repo, &llm.LLMClient)
+	return service, repo, llm
+}
+
 // Tests
 func TestAddressService_GetAddresses(t *testing.T) {
 	t.Parallel()
-	repo := new(mockAddressRepository)
-	service := NewAddressService(repo)
+	service, repo, _ := setupAddressService()
 	input := GetAddressesInput{
 		Language: models.LanguageEN,
 		Tags:     []string{"featured", "outdoor"},
@@ -90,8 +102,7 @@ func TestAddressService_GetAddresses(t *testing.T) {
 
 func TestAddressService_GetAddresses_Error(t *testing.T) {
 	t.Parallel()
-	repo := new(mockAddressRepository)
-	service := NewAddressService(repo)
+	service, repo, _ := setupAddressService()
 	input := GetAddressesInput{
 		Language: models.LanguageZH,
 		Tags:     []string{"cafe"},
@@ -128,8 +139,7 @@ func TestAddressService_GetAddresses_Error(t *testing.T) {
 
 func TestAddressService_GetAddresses_PageLimit(t *testing.T) {
 	t.Parallel()
-	repo := new(mockAddressRepository)
-	service := NewAddressService(repo)
+	service, repo, _ := setupAddressService()
 	input := GetAddressesInput{
 		Language: models.LanguageZH,
 		Tags:     []string{""},
@@ -166,8 +176,7 @@ func TestAddressService_GetAddresses_PageLimit(t *testing.T) {
 
 func TestAddressService_GetAddressById(t *testing.T) {
 	t.Parallel()
-	repo := new(mockAddressRepository)
-	service := NewAddressService(repo)
+	service, repo, _ := setupAddressService()
 	expectedAddress := models.AddressItem{ID: "2", Name: "Address Two"}
 	input := GetAddressByIdInput{
 		Language: models.LanguageZH,
@@ -199,7 +208,7 @@ func TestAddressService_GetAddressById(t *testing.T) {
 func TestAddressService_GetAddressById_Error(t *testing.T) {
 	t.Parallel()
 	repo := new(mockAddressRepository)
-	service := NewAddressService(repo)
+	service, repo, _ := setupAddressService()
 	input := GetAddressByIdInput{
 		Language: models.LanguageZH,
 		ID:       "",
@@ -229,7 +238,7 @@ func TestAddressService_GetAddressById_Error(t *testing.T) {
 func TestAddressService_CreateNewAddress(t *testing.T) {
 	t.Parallel()
 	repo := new(mockAddressRepository)
-	service := NewAddressService(repo)
+	service, repo, _ := setupAddressService()
 	expectedID := "expected_id"
 	input := CreateNewAddressInput{
 		Language: models.LanguageZH,
@@ -249,7 +258,7 @@ func TestAddressService_CreateNewAddress(t *testing.T) {
 func TestAddressService_CreateNewAddress_Error(t *testing.T) {
 	t.Parallel()
 	repo := new(mockAddressRepository)
-	service := NewAddressService(repo)
+	service, repo, _ := setupAddressService()
 	input := CreateNewAddressInput{
 		Language: models.LanguageZH,
 		Address:  models.AddressItem{Name: "test", ID: "test"},

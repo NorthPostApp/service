@@ -31,6 +31,17 @@ type CreateAddressResponse struct {
 	ID string `json:"id"`
 }
 
+type GenerateNewAddressRequest struct {
+	Language     models.Language `json:"language" binding:"required"`
+	Prompt       string          `json:"prompt" binding:"required"`
+	SystemPrompt string          `json:"systemPrompt,omitempty"`
+	Model        string          `json:"model,omitempty"`
+}
+
+type GenerateNewAddressResponse struct {
+	Data AddressItemDTO `json:"data"`
+}
+
 type AddressItemDTO struct {
 	ID         string     `json:"id"`
 	Name       string     `json:"name"`
@@ -45,7 +56,7 @@ type AddressDTO struct {
 	Line1        string `json:"line1" binding:"required"`
 	Line2        string `json:"line2,omitempty"`
 	BuildingName string `json:"buildingName,omitempty"`
-	PostalCode   string `json:"postalCode" binding:"required"`
+	PostalCode   string `json:"postalCode,omitempty"`
 	Region       string `json:"region" binding:"required"`
 }
 
