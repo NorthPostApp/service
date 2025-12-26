@@ -1,5 +1,16 @@
 package models
 
+type AddressGenerationSchema struct {
+	Name       string   `json:"name"`
+	BriefIntro string   `json:"briefIntro"`
+	Tags       []string `json:"tags"`
+	Address    Address  `json:"address"`
+}
+
+type BatchAddressGenerationSchema struct {
+	Addresses []AddressGenerationSchema
+}
+
 type AddressItem struct {
 	ID         string   `json:"id" firestore:"id"`
 	Name       string   `json:"name" firestore:"name"`
@@ -8,13 +19,6 @@ type AddressItem struct {
 	UpdatedAt  int64    `json:"updatedAt" firestore:"updatedAt"`
 	Tags       []string `json:"tags" firestore:"tags"`
 	Address    Address  `json:"address" firestore:"address"`
-}
-
-type AddressGenerationSchema struct {
-	Name       string   `json:"name"`
-	BriefIntro string   `json:"briefIntro"`
-	Tags       []string `json:"tags"`
-	Address    Address  `json:"address"`
 }
 
 type Address struct {

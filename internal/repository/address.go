@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"north-post/service/internal/domain/v1/models"
+	"os"
 	"slices"
 	"time"
 
@@ -55,7 +56,7 @@ type CreateNewAddressOption struct {
 // Get All addresses from the repository
 // TODO: Pagination when the content size is getting larger
 func (r *AddressRepository) GetAllAddresses(ctx context.Context, opts GetAllAddressesOptions) ([]models.AddressItem, error) {
-	collectionName := getCollectionName(opts.Language)
+	collectionName := getAddressCollectionName(opts.Language)
 	query := r.client.Collection(collectionName).Query
 	// Apply filters
 	if len(opts.Tags) > 0 {
@@ -94,7 +95,7 @@ func (r *AddressRepository) GetAllAddresses(ctx context.Context, opts GetAllAddr
 
 // Get a address by ID
 func (r *AddressRepository) GetAddressById(ctx context.Context, opts GetAddressByIdOptions) (*models.AddressItem, error) {
-	collectionName := getCollectionName(opts.Language)
+	collectionName := getAddressCollectionName(opts.Language)
 	docRef := r.client.Collection(collectionName).Doc(opts.ID)
 	// get document
 	doc, err := docRef.Get(ctx)
@@ -117,7 +118,7 @@ func (r *AddressRepository) GetAddressById(ctx context.Context, opts GetAddressB
 
 // Create a new address
 func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNewAddressOption) (string, error) {
-	collectionName := getCollectionName(opts.Language)
+	collectionName := getAddressCollectionName(opts.Language)
 	// first check if there exists data with the same name
 	query := r.client.Collection(collectionName).Where("name", "==", opts.AddressItem.Name).Limit(getByNameLimit)
 	iter := query.Documents(ctx)
@@ -157,8 +158,8 @@ func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNew
 }
 
 // =========== Helper functions ==========
-func getCollectionName(language models.Language) string {
-	return fmt.Sprintf("%s_%s", addressTablePrefix, language.Get())
+func getAddressCollectionName(language models.Language) string {
+	return fmt.Sprintf("%s_%s_%s", os.Getenv("MODE"), addressTablePrefix, language.Get())
 }
 
 func compareTags(tagsNewItem []string, tagsExistingItem []string) float32 {

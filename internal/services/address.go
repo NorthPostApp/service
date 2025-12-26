@@ -61,14 +61,16 @@ type CreateNewAddressOutput struct {
 }
 
 type GenerateAddressInput struct {
-	Prompt   string
-	Language models.Language
-	Model    openai.ChatModel
+	SystemPrompt    string
+	Prompt          string
+	Language        models.Language
+	Model           openai.ChatModel
+	ReasoningEffort openai.ReasoningEffort
 	// Temperature *float64 // might be useful in the future
 }
 
 type GenerateAddressOutput struct {
-	Address models.AddressItem
+	Addresses []models.AddressItem
 }
 
 func (s *AddressService) GetAddresses(ctx context.Context, input GetAddressesInput) (*GetAddressesOutput, error) {
@@ -117,29 +119,30 @@ func (s *AddressService) GenerateNewAddress(ctx context.Context, input GenerateA
 	if input.Prompt == "" {
 		return nil, fmt.Errorf("prompt cannot be empty")
 	}
-	// set default model if not provided
-	model := input.Model
-	if model == "" {
-		model = openai.ChatModelGPT5Mini
-	}
 	// configure structured completion options
 	opts := infra.StructuredCompletionOptions{
-		Prompt:      input.Prompt,
-		SchemaName:  "address_generation",
-		Description: "Generate a structured address with metadata",
-		Model:       model,
+		SystemPrompt:    input.SystemPrompt,
+		Prompt:          input.Prompt,
+		SchemaName:      "address_generation",
+		Description:     "Generate a structured address with metadata",
+		Model:           input.Model,
+		ReasoningEffort: input.ReasoningEffort,
 		// may insert temperature field here in the future
 	}
-	schema := models.AddressGenerationSchema{}
+	schema := models.BatchAddressGenerationSchema{}
 	result, err := infra.StructuredCompletion(ctx, s.llm, opts, schema)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate address: %w", err)
 	}
-	addressItem := models.AddressItem{
-		Name:       result.Name,
-		BriefIntro: result.BriefIntro,
-		Tags:       result.Tags,
-		Address:    result.Address,
+	addresses := []models.AddressItem{}
+	for _, address := range result.Addresses {
+		addressItem := models.AddressItem{
+			Name:       address.Name,
+			BriefIntro: address.BriefIntro,
+			Tags:       address.Tags,
+			Address:    address.Address,
+		}
+		addresses = append(addresses, addressItem)
 	}
-	return &GenerateAddressOutput{Address: addressItem}, nil
+	return &GenerateAddressOutput{Addresses: addresses}, nil
 }

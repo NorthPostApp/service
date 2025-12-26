@@ -32,14 +32,15 @@ type CreateAddressResponse struct {
 }
 
 type GenerateNewAddressRequest struct {
-	Language     models.Language `json:"language" binding:"required"`
-	Prompt       string          `json:"prompt" binding:"required"`
-	SystemPrompt string          `json:"systemPrompt,omitempty"`
-	Model        string          `json:"model,omitempty"`
+	Language        models.Language `json:"language" binding:"required"`
+	Prompt          string          `json:"prompt" binding:"required"`
+	SystemPrompt    string          `json:"systemPrompt,omitempty"`
+	Model           string          `json:"model,omitempty"`
+	ReasoningEffort string          `json:"reasoningEffort,omitempty"`
 }
 
 type GenerateNewAddressResponse struct {
-	Data AddressItemDTO `json:"data"`
+	Data []AddressItemDTO `json:"data"`
 }
 
 type AddressItemDTO struct {

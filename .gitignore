@@ -1,6 +1,8 @@
 .firebase/
 .DS_Store
 .env
+.env.production
+.env.development
 .vscode
 tmp/
 

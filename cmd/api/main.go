@@ -24,8 +24,18 @@ const PORT_NUMBER = 8080
 func main() {
 	// Initialize logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	if err := godotenv.Load(); err != nil {
+
+	// Load environments
+	env := os.Getenv("GO_ENV")
+	if env == "" || env != "production" {
+		env = "development"
+	}
+	logger.Info("loading environment", "env", env)
+	envFile := fmt.Sprintf(".env.%s", env)
+	if err := godotenv.Load(envFile); err != nil {
 		logger.Info("no .env file found, using system environment variables")
+	} else {
+		logger.Info("loaded environment configuration", "file", envFile)
 	}
 
 	// Initialize Firebase client
@@ -46,6 +56,10 @@ func main() {
 	addressService := services.NewAddressService(addressRepo, llmClient)
 	adminAddressHandler := handlers.NewAddressHandler(addressService, logger)
 
+	promptRepo := repository.NewPromptRepository(firebaseClient.Firestore, logger)
+	promptService := services.NewPromptService(promptRepo)
+	promptHandler := handlers.NewPromptHandler(promptService, logger)
+
 	router := gin.Default()
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"},
@@ -60,6 +74,7 @@ func main() {
 	admin.SetupAdminRouter(router_v1,
 		&admin.Handlers{
 			Address: adminAddressHandler,
+			Prompt:  promptHandler,
 		},
 		adminMiddleware)
 

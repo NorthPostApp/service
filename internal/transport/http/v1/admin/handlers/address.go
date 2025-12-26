@@ -9,6 +9,7 @@ import (
 	"north-post/service/internal/transport/http/v1/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/openai/openai-go/v3"
 )
 
 type AddressHandler struct {
@@ -140,6 +141,17 @@ func (h *AddressHandler) CreateNewAddress(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GenerateNewAddress godoc
+// @Summary Generate new address suggestions
+// @Description Uses LLM to generate new address suggestions based on prompts and reasoning effort
+// @Tags Admin Address
+// @Accept json
+// @Produce json
+// @Param request body dto.GenerateNewAddressRequest true "Request body"
+// @Success 200 {object} dto.GenerateNewAddressResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /admin/address/generate [post]
 func (h *AddressHandler) GenerateNewAddress(c *gin.Context) {
 	var req dto.GenerateNewAddressRequest
 	if !utils.BindJSON(c, &req, h.logger) {
@@ -149,16 +161,20 @@ func (h *AddressHandler) GenerateNewAddress(c *gin.Context) {
 		return
 	}
 	input := services.GenerateAddressInput{
-		Language: req.Language,
-		Prompt:   req.Prompt,
-		Model:    req.Model,
+		Language:        req.Language,
+		SystemPrompt:    req.SystemPrompt,
+		Prompt:          req.Prompt,
+		Model:           req.Model,
+		ReasoningEffort: openai.ReasoningEffort(req.ReasoningEffort),
 	}
 	output, err := h.service.GenerateNewAddress(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to generate new address", "request", req, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 	response := dto.GenerateNewAddressResponse{
-		Data: dto.ToAddressDTO(output.Address),
+		Data: dto.ToAddressDTOs(output.Addresses),
 	}
 	c.JSON(http.StatusOK, response)
 }

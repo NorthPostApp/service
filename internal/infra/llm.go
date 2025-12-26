@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/akane9506/gptschema"
 	"github.com/openai/openai-go/v3"
@@ -28,10 +29,12 @@ func NewLLMClient(logger *slog.Logger) (*LLMClient, error) {
 }
 
 type StructuredCompletionOptions struct {
-	Prompt      string
-	SchemaName  string
-	Description string
-	Model       openai.ChatModel
+	Prompt          string
+	SystemPrompt    string
+	SchemaName      string
+	Description     string
+	Model           openai.ChatModel
+	ReasoningEffort openai.ReasoningEffort
 	// we might need these two params in the future
 	// Temperature *float64
 	// MaxTokens   *int64
@@ -47,10 +50,14 @@ func StructuredCompletion[T interface{}](
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate schema: %w", err)
 	}
-	// Set default model if not provided
+	// Set default model and effort if not provided
 	model := opts.Model
 	if model == "" {
 		model = openai.ChatModelGPT5Mini
+	}
+	effort := opts.ReasoningEffort
+	if effort == "" {
+		effort = "low"
 	}
 	// Build the schema parameter
 	schemaParam := openai.ResponseFormatJSONSchemaJSONSchemaParam{
@@ -60,15 +67,24 @@ func StructuredCompletion[T interface{}](
 		Strict:      openai.Bool(true),
 	}
 	// Build completion parameters
+	messages := []openai.ChatCompletionMessageParamUnion{}
+	if strings.TrimSpace(opts.SystemPrompt) != "" {
+		messages = append(messages, openai.SystemMessage(opts.SystemPrompt))
+	}
+	if strings.TrimSpace(opts.Prompt) != "" {
+		messages = append(messages, openai.UserMessage(opts.Prompt))
+	}
+	if len(messages) == 0 {
+		l.logger.Error("no system and user message provided")
+		return nil, fmt.Errorf("no user or system message provided")
+	}
 	completionParams := openai.ChatCompletionNewParams{
-		Messages: []openai.ChatCompletionMessageParamUnion{
-			// there can be system prompt here
-			openai.UserMessage(opts.Prompt),
-		},
+		Messages: messages,
 		ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
 			OfJSONSchema: &openai.ResponseFormatJSONSchemaParam{JSONSchema: schemaParam},
 		},
-		Model: model,
+		Model:           model,
+		ReasoningEffort: effort,
 	}
 	// query the chat completion API
 	chat, err := l.LLM.Chat.Completions.New(ctx, completionParams)
