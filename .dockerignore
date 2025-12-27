@@ -1,0 +1,9 @@
+.github
+.vscode
+.git
+tmp
+*.md
+coverage.out
+LICENSE
+Dockerfile
+.dockerignore
