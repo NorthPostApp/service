@@ -55,10 +55,6 @@ func (l *LLMClient) StructuredCompletion(
 	if model == "" {
 		model = openai.ChatModelGPT5Mini
 	}
-	effort := opts.ReasoningEffort
-	if effort == "" {
-		effort = "low"
-	}
 	// Build the schema parameter
 	schemaParam := openai.ResponseFormatJSONSchemaJSONSchemaParam{
 		Name:        opts.SchemaName,
@@ -83,8 +79,15 @@ func (l *LLMClient) StructuredCompletion(
 		ResponseFormat: openai.ChatCompletionNewParamsResponseFormatUnion{
 			OfJSONSchema: &openai.ResponseFormatJSONSchemaParam{JSONSchema: schemaParam},
 		},
-		Model:           model,
-		ReasoningEffort: effort,
+		Model: model,
+	}
+	// Only gpt 5 models supports reasoning effort
+	if strings.HasPrefix(model, "gpt-5") {
+		effort := opts.ReasoningEffort
+		if effort == "" {
+			effort = "low"
+		}
+		completionParams.ReasoningEffort = effort
 	}
 	// query the chat completion API
 	chat, err := l.LLM.Chat.Completions.New(ctx, completionParams)
