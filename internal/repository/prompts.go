@@ -39,7 +39,6 @@ type GetSystemAddressGenerationPromptOptions struct {
 func (r *PromptRepository) GetSystemPrompt(ctx context.Context, opts GetSystemPromptOptions) (string, error) {
 	language := opts.Language
 	key := opts.Key
-	fmt.Println("table", promptTable)
 	docRef := r.client.Collection(promptTable).Doc(getPromptLanguage(language))
 	doc, err := docRef.Get(ctx)
 	if err != nil {

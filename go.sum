@@ -10,8 +10,8 @@ cloud.google.com/go/firestore v1.20.0 h1:JLlT12QP0fM2SJirKVyu2spBCO8leElaW0OOtPm
 cloud.google.com/go/firestore v1.20.0/go.mod h1:jqu4yKdBmDN5srneWzx3HlKrHFWFdlkgjgQ6BKIOFQo=
 cloud.google.com/go/longrunning v0.7.0 h1:FV0+SYF1RIj59gyoWDRi45GiYUMM3K1qO51qoboQT1E=
 cloud.google.com/go/longrunning v0.7.0/go.mod h1:ySn2yXmjbK9Ba0zsQqunhDkYi0+9rlXIwnoAf+h+TPY=
-github.com/akane9506/gptschema v0.1.1 h1:LWcHfBB1b4jN5SmDKd31vuwa7JedWS88pvqJzyBixds=
-github.com/akane9506/gptschema v0.1.1/go.mod h1:dpXY+p/Obp3T300VCNbZJHspHWY3Tp0TvZ6bEf52tPc=
+github.com/akane9506/gptschema v1.0.0 h1:oYTsQqnS+aafxkVNg5n2XH6DWkaxqxDqqfu5zAoPHEk=
+github.com/akane9506/gptschema v1.0.0/go.mod h1:dpXY+p/Obp3T300VCNbZJHspHWY3Tp0TvZ6bEf52tPc=
 github.com/bytedance/gopkg v0.1.3 h1:TPBSwH8RsouGCBcMBktLt1AymVo2TVsBVCY4b6TnZ/M=
 github.com/bytedance/gopkg v0.1.3/go.mod h1:576VvJ+eJgyCzdjS+c4+77QF3p7ubbtiKARP3TxducM=
 github.com/bytedance/sonic v1.14.2 h1:k1twIoe97C1DtYUo+fZQy865IuHia4PR5RPiuGPPIIE=
