@@ -4,9 +4,10 @@ go 1.24.3
 
 require (
 	cloud.google.com/go/firestore v1.20.0
-	github.com/akane9506/gptschema v0.1.1
+	github.com/akane9506/gptschema v1.0.0
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.11.0
+	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/openai/openai-go/v3 v3.15.0
 	github.com/stretchr/testify v1.11.1

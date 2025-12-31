@@ -8,6 +8,7 @@ import (
 	"north-post/service/internal/infra"
 	"north-post/service/internal/repository"
 
+	"github.com/google/uuid"
 	"github.com/openai/openai-go/v3"
 )
 
@@ -142,6 +143,7 @@ func (s *AddressService) GenerateNewAddress(ctx context.Context, input GenerateA
 	addresses := []models.AddressItem{}
 	for _, address := range result.Addresses {
 		addressItem := models.AddressItem{
+			ID:         uuid.NewString(),
 			Name:       address.Name,
 			BriefIntro: address.BriefIntro,
 			Tags:       address.Tags,
