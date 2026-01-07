@@ -32,3 +32,6 @@ gin-bin
 /bin/
 /dist/
 /build/
+
+# Docker
+docker-compose.yml

@@ -15,8 +15,8 @@ RUN go mod download
 # Copy the rest of the source code
 COPY . .
 
-# Build the Go app
-RUN go build -o main ./cmd/api
+# Build the Go app for Linux AMD64
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main ./cmd/api
 
 # Final image
 FROM alpine:latest
@@ -28,6 +28,5 @@ COPY .env.development ./.env.development
 COPY .env.production ./.env.production
 
 COPY --from=builder /app/main .
-EXPOSE 8080
 
 CMD ["./main"]

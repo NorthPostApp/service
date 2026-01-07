@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 
 	"north-post/service/internal/infra"
 	"north-post/service/internal/repository"
@@ -19,7 +20,15 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const PORT_NUMBER = 8080
+var PORT_NUMBER = 8080
+
+func getPort() string {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	return port
+}
 
 func main() {
 	// Initialize logger
@@ -64,8 +73,13 @@ func main() {
 	promptHandler := handlers.NewPromptHandler(promptService, logger)
 
 	router := gin.Default()
+	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+	origins := []string{}
+	if allowedOrigins != "" {
+		origins = strings.Split(allowedOrigins, ",")
+	}
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowOrigins:     origins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -87,8 +101,9 @@ func main() {
 		})
 	})
 
-	logger.Info("starting server", "port", PORT_NUMBER)
-	if err := router.Run(fmt.Sprintf(`:%d`, PORT_NUMBER)); err != nil {
+	port := getPort()
+	logger.Info("starting server", "port", port)
+	if err := router.Run(fmt.Sprintf(`:%s`, port)); err != nil {
 		log.Fatalf("failed to run server: %v", err)
 	}
 }
