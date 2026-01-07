@@ -1,15 +1,21 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
 
+	"firebase.google.com/go/v4/auth"
 	"github.com/gin-gonic/gin"
 )
 
-func AdminAuthMiddleware(logger *slog.Logger) gin.HandlerFunc {
+type authClient interface {
+	VerifyIDToken(c context.Context, idToken string) (*auth.Token, error)
+}
+
+func AdminAuthMiddleware(auth authClient, logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		clientIP := c.ClientIP()
@@ -36,8 +42,20 @@ func AdminAuthMiddleware(logger *slog.Logger) gin.HandlerFunc {
 			return
 		}
 
-		// TODO: implement authorization with firebase or cache
+		// verify the firebase id token
+		idToken := headerParts[1]
+		authToken, err := auth.VerifyIDToken(c, idToken)
+		if err != nil {
+			logger.Error("Failed to verify ID token", "error", err, "clientIP", clientIP)
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": err.Error(),
+			})
+			c.Abort()
+			return
+		}
 
+		logger.Info("Request user", "user id", authToken.UID, "email", authToken.Claims["email"])
+		c.Set("user_id", authToken.UID)
 		c.Next()
 	}
 }

@@ -51,6 +51,9 @@ func main() {
 
 	// Initialize LLM client
 	llmClient, err := infra.NewLLMClient(logger)
+	if err != nil {
+		log.Fatalf("failed to initialize llm client %v", err)
+	}
 
 	addressRepo := repository.NewAddressRepository(firebaseClient.Firestore, logger)
 	addressService := services.NewAddressService(addressRepo, llmClient)
@@ -70,7 +73,7 @@ func main() {
 	}))
 	router_v1 := router.Group("/v1")
 
-	adminMiddleware := middleware.AdminAuthMiddleware(logger)
+	adminMiddleware := middleware.AdminAuthMiddleware(firebaseClient.Auth, logger)
 	admin.SetupAdminRouter(router_v1,
 		&admin.Handlers{
 			Address: adminAddressHandler,
