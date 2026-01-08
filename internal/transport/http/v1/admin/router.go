@@ -9,6 +9,7 @@ import (
 type Handlers struct {
 	Address *handlers.AddressHandler
 	Prompt  *handlers.PromptHandler
+	User    *handlers.UserHandler
 }
 
 func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.HandlerFunc) {
@@ -27,6 +28,10 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.
 		prompt := admin.Group("/prompt")
 		{
 			prompt.GET("/system/address", h.Prompt.GetSystemAddressGenerationPrompt)
+		}
+		signIn := admin.Group("/signin")
+		{
+			signIn.POST("", h.User.SignInAdminUserById)
 		}
 	}
 }

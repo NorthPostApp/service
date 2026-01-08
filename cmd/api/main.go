@@ -72,6 +72,10 @@ func main() {
 	promptService := services.NewPromptService(promptRepo)
 	promptHandler := handlers.NewPromptHandler(promptService, logger)
 
+	userRepo := repository.NewUserRepository(firebaseClient.Firestore, logger)
+	userService := services.NewUserService(userRepo)
+	userHandler := handlers.NewUserHandler(userService, logger)
+
 	router := gin.Default()
 	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
 	origins := []string{}
@@ -92,6 +96,7 @@ func main() {
 		&admin.Handlers{
 			Address: adminAddressHandler,
 			Prompt:  promptHandler,
+			User:    userHandler,
 		},
 		adminMiddleware)
 

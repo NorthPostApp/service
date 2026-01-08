@@ -16,14 +16,14 @@ type promptService interface {
 }
 
 type PromptHandler struct {
-	prompt promptService
-	logger *slog.Logger
+	service promptService
+	logger  *slog.Logger
 }
 
-func NewPromptHandler(prompt promptService, logger *slog.Logger) *PromptHandler {
+func NewPromptHandler(service promptService, logger *slog.Logger) *PromptHandler {
 	return &PromptHandler{
-		prompt: prompt,
-		logger: logger,
+		service: service,
+		logger:  logger,
 	}
 }
 
@@ -44,7 +44,7 @@ func (h *PromptHandler) GetSystemAddressGenerationPrompt(c *gin.Context) {
 	opts := services.GetSystemAddressGenerationPromptInput{
 		Language: models.Language(languageStr),
 	}
-	prompt, err := h.prompt.GetSystemAddressGenerationPrompt(c.Request.Context(), opts)
+	prompt, err := h.service.GetSystemAddressGenerationPrompt(c.Request.Context(), opts)
 	if err != nil {
 		h.logger.Error("failed to get system address generation prompt", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

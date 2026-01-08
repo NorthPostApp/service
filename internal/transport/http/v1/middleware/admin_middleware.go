@@ -53,8 +53,6 @@ func AdminAuthMiddleware(auth authClient, logger *slog.Logger) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-
-		logger.Info("Request user", "user id", authToken.UID, "email", authToken.Claims["email"])
 		c.Set("user_id", authToken.UID)
 		c.Next()
 	}
