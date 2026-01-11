@@ -7,7 +7,7 @@ type SignInAdminUserByIdRequest struct {
 }
 
 type SignInAdminUserByIdResponse struct {
-	Data AdminUserDTO `json:"user"`
+	Data AdminUserDTO `json:"data"`
 }
 
 type AdminUserDTO struct {
