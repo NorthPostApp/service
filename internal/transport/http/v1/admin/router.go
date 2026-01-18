@@ -20,7 +20,7 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.
 			// GET
 			address.GET("/:id", h.Address.GetAddressById)
 			// POST
-			address.POST("", h.Address.GetAddresses)
+			address.POST("", h.Address.GetAllAddresses)
 			address.POST("/generate", h.Address.GenerateNewAddress)
 			// PUT
 			address.PUT("", h.Address.CreateNewAddress)

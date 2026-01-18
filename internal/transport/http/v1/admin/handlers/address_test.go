@@ -43,7 +43,7 @@ func (m *MockAddressService) GenerateNewAddress(ctx context.Context, input servi
 func setupRouter(handler *AddressHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
-	r.POST("/admin/address", handler.GetAddresses)
+	r.POST("/admin/address", handler.GetAllAddresses)
 	r.GET("/admin/address/:id", handler.GetAddressById)
 	r.PUT("/admin/address", handler.CreateNewAddress)
 	r.POST("/admin/address/generate", handler.GenerateNewAddress)
@@ -93,6 +93,13 @@ func TestGetAddresses(t *testing.T) {
 			router.ServeHTTP(w, req)
 			assert.Equal(t, tt.expectedStatus, w.Code)
 			mockSvc.AssertExpectations(t)
+			if w.Code == http.StatusOK {
+				var response dto.GetAllAddressResponse
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.mockOutput.Addresses[0].ID, response.Data[0].ID)
+				assert.Equal(t, tt.mockOutput.Count, response.Count)
+			}
 		})
 	}
 }

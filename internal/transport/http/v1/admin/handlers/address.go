@@ -44,7 +44,7 @@ func NewAddressHandler(service addressService, logger *slog.Logger) *AddressHand
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /admin/address [post]
-func (h *AddressHandler) GetAddresses(c *gin.Context) {
+func (h *AddressHandler) GetAllAddresses(c *gin.Context) {
 	var req dto.GetAllAddressesRequest
 	if !utils.BindJSON(c, &req, h.logger) {
 		return

@@ -48,6 +48,8 @@ type AddressItemDTO struct {
 	Name       string     `json:"name"`
 	BriefIntro string     `json:"briefIntro"`
 	Tags       []string   `json:"tags"`
+	CreatedAt  int64      `json:"createdAt"`
+	UpdatedAt  int64      `json:"updatedAT"`
 	Address    AddressDTO `json:"address"`
 }
 
@@ -77,6 +79,8 @@ func ToAddressDTO(addressItem models.AddressItem) AddressItemDTO {
 		Name:       addressItem.Name,
 		BriefIntro: addressItem.BriefIntro,
 		Tags:       addressItem.Tags,
+		CreatedAt:  addressItem.CreatedAt,
+		UpdatedAt:  addressItem.UpdatedAt,
 		Address:    addressDto,
 	}
 }
