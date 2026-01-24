@@ -69,6 +69,7 @@ type GetAllAddressesResponseDTO struct {
 	TotalCount int64            `json:"totalCount"`
 	LastDocID  string           `json:"lastDocId"`
 	HasMore    bool             `json:"hasMore"`
+	Language   models.Language  `json:"language"`
 }
 
 func ToAddressDTO(addressItem models.AddressItem) AddressItemDTO {
@@ -101,12 +102,13 @@ func ToAddressDTOs(addresses []models.AddressItem) []AddressItemDTO {
 	return output
 }
 
-func ToGetAllAddressesResponseDTO(output *services.GetAllAddressesOutput) GetAllAddressesResponseDTO {
+func ToGetAllAddressesResponseDTO(output *services.GetAllAddressesOutput, language models.Language) GetAllAddressesResponseDTO {
 	return GetAllAddressesResponseDTO{
 		Addresses:  ToAddressDTOs(output.Addresses),
 		TotalCount: output.TotalCount,
 		LastDocID:  output.LastDocID,
 		HasMore:    output.HasMore,
+		Language:   language,
 	}
 }
 

@@ -65,7 +65,7 @@ func (h *AddressHandler) GetAllAddresses(c *gin.Context) {
 		return
 	}
 	response := dto.GetAllAddressResponse{
-		Data: dto.ToGetAllAddressesResponseDTO(output),
+		Data: dto.ToGetAllAddressesResponseDTO(output, req.Language),
 	}
 	c.JSON(http.StatusOK, response)
 }
