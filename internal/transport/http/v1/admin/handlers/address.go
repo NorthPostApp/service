@@ -19,6 +19,7 @@ type addressService interface {
 	GenerateNewAddress(ctx context.Context, input services.GenerateAddressInput) (*services.GenerateAddressOutput, error)
 	GetAddressById(ctx context.Context, input services.GetAddressByIdInput) (*services.GetAddressByIdOutput, error)
 	GetAllAddresses(ctx context.Context, input services.GetAllAddressesInput) (*services.GetAllAddressesOutput, error)
+	UpdateAddress(ctx context.Context, input services.UpdateAddressInput) (*services.UpdateAddressOutput, error)
 }
 
 type AddressHandler struct {
@@ -146,6 +147,43 @@ func (h *AddressHandler) CreateNewAddress(c *gin.Context) {
 	}
 	response := dto.CreateAddressResponse{
 		ID: output.ID,
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// UpdateAddress updates an existing address entry with language-specific information.
+//
+// @Summary Update an existing address
+// @Description Update an existing address entry with language-specific information
+// @Tags Admin Address
+// @Accept json
+// @Produce json
+// @Param request body dto.UpdateAddressRequest true "Request body"
+// @Success 200 {object} dto.UpdateAddressResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /admin/address [post]
+func (h *AddressHandler) UpdateAddress(c *gin.Context) {
+	var req dto.UpdateAddressRequest
+	if !utils.BindJSON(c, &req, h.logger) {
+		return
+	}
+	if !utils.ValidateLanguage(c, req.Language, h.logger) {
+		return
+	}
+	input := services.UpdateAddressInput{
+		Language: req.Language,
+		ID:       req.ID,
+		Address:  dto.FromUpdateAddressDTO(req),
+	}
+	output, err := h.service.UpdateAddress(c.Request.Context(), input)
+	if err != nil {
+		h.logger.Error("failed to update address", "address", req, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	response := dto.UpdateAddressResponse{
+		Data: dto.ToAddressDTO(output.Address),
 	}
 	c.JSON(http.StatusOK, response)
 }

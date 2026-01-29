@@ -32,6 +32,16 @@ type CreateAddressResponse struct {
 	ID string `json:"id"`
 }
 
+type UpdateAddressRequest struct {
+	Language models.Language `json:"language" binding:"required"`
+	ID       string          `json:"id" binding:"required"`
+	Address  AddressItemDTO  `json:"address" binding:"required"`
+}
+
+type UpdateAddressResponse struct {
+	Data AddressItemDTO `json:"data"`
+}
+
 type GenerateNewAddressRequest struct {
 	Language        models.Language `json:"language" binding:"required"`
 	Prompt          string          `json:"prompt" binding:"required"`
@@ -70,6 +80,18 @@ type GetAllAddressesResponseDTO struct {
 	LastDocID  string           `json:"lastDocId"`
 	HasMore    bool             `json:"hasMore"`
 	Language   models.Language  `json:"language"`
+}
+
+func FromAddressDTO(address AddressDTO) models.Address {
+	return models.Address{
+		Country:      address.Country,
+		City:         address.City,
+		Line1:        address.Line1,
+		Line2:        address.Line2,
+		BuildingName: address.BuildingName,
+		PostalCode:   address.PostalCode,
+		Region:       address.Region,
+	}
 }
 
 func ToAddressDTO(addressItem models.AddressItem) AddressItemDTO {
@@ -117,14 +139,19 @@ func FromCreateAddressDTO(req CreateAddressRequest) models.AddressItem {
 		Name:       req.Name,
 		BriefIntro: req.BriefIntro,
 		Tags:       req.Tags,
-		Address: models.Address{
-			Country:      req.Address.Country,
-			City:         req.Address.City,
-			Line1:        req.Address.Line1,
-			Line2:        req.Address.Line2,
-			BuildingName: req.Address.BuildingName,
-			PostalCode:   req.Address.PostalCode,
-			Region:       req.Address.Region,
-		},
+		Address:    FromAddressDTO(req.Address),
+	}
+}
+
+func FromUpdateAddressDTO(req UpdateAddressRequest) models.AddressItem {
+	addressItem := req.Address
+	return models.AddressItem{
+		ID:         addressItem.ID,
+		Name:       addressItem.Name,
+		BriefIntro: addressItem.BriefIntro,
+		Tags:       addressItem.Tags,
+		CreatedAt:  addressItem.CreatedAt,
+		UpdatedAt:  addressItem.UpdatedAt,
+		Address:    FromAddressDTO(addressItem.Address),
 	}
 }
