@@ -42,6 +42,23 @@ func (m *mockAddressRepository) CreateNewAddress(ctx context.Context, opts repos
 	return args.String(0), args.Error(1)
 }
 
+func (m *mockAddressRepository) UpdateAddress(ctx context.Context, opts repository.UpdateAddressOption) (*models.AddressItem, error) {
+	args := m.Called(ctx, opts)
+	var address *models.AddressItem
+	if value := args.Get(0); value != nil {
+		address, _ = value.(*models.AddressItem)
+	}
+	return address, args.Error(1)
+}
+
+func (m *mockAddressRepository) DeleteAddress(ctx context.Context, opts repository.DeleteAddressOption) (string, error) {
+	args := m.Called(ctx, opts)
+	if args.Get(0) == nil {
+		return "", args.Error(1)
+	}
+	return args.String(0), args.Error(1)
+}
+
 type mockLLMClient struct {
 	mock.Mock
 }
@@ -337,4 +354,37 @@ func TestAddressService_GenerateNewAddress_Error(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, output)
 	assert.Contains(t, err.Error(), "failed to generate address")
+}
+
+func TestAddressService_UpdateAddress(t *testing.T) {
+	t.Parallel()
+	repo := new(mockAddressRepository)
+	llm := new(mockLLMClient)
+	addressItem := models.AddressItem{ID: "123", Name: "Test", BriefIntro: "Brief introduction"}
+	service := NewAddressService(repo, llm)
+	input := UpdateAddressInput{
+		Language: "EN",
+		ID:       "123",
+		Address:  models.AddressItem{ID: "123", Name: "Test", BriefIntro: "Brief introduction"},
+	}
+	repo.On("UpdateAddress", mock.Anything, mock.Anything).Return(&addressItem, nil).Once()
+	output, err := service.UpdateAddress(context.Background(), input)
+	assert.Nil(t, err)
+	assert.NotNil(t, output)
+}
+
+func TestAddressService_UpdateAddress_Error(t *testing.T) {
+	t.Parallel()
+	repo := new(mockAddressRepository)
+	llm := new(mockLLMClient)
+	service := NewAddressService(repo, llm)
+	input := UpdateAddressInput{
+		Language: "EN",
+		ID:       "123",
+		Address:  models.AddressItem{ID: "123", Name: "Test", BriefIntro: "Brief introduction"},
+	}
+	repo.On("UpdateAddress", mock.Anything, mock.Anything).Return(nil, assert.AnError).Once()
+	output, err := service.UpdateAddress(context.Background(), input)
+	assert.Nil(t, output)
+	assert.Error(t, err)
 }

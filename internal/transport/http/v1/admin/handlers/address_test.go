@@ -35,6 +35,10 @@ func (m *MockAddressService) CreateNewAddress(ctx context.Context, input service
 	args := m.Called(ctx, input)
 	return args.Get(0).(*services.CreateNewAddressOutput), args.Error(1)
 }
+func (m *MockAddressService) UpdateAddress(ctx context.Context, input services.UpdateAddressInput) (*services.UpdateAddressOutput, error) {
+	args := m.Called(ctx, input)
+	return args.Get(0).(*services.UpdateAddressOutput), args.Error(1)
+}
 func (m *MockAddressService) GenerateNewAddress(ctx context.Context, input services.GenerateAddressInput) (*services.GenerateAddressOutput, error) {
 	args := m.Called(ctx, input)
 	return args.Get(0).(*services.GenerateAddressOutput), args.Error(1)
@@ -47,6 +51,7 @@ func setupRouter(handler *AddressHandler) *gin.Engine {
 	r.GET("/admin/address/:id", handler.GetAddressById)
 	r.PUT("/admin/address", handler.CreateNewAddress)
 	r.POST("/admin/address/generate", handler.GenerateNewAddress)
+	r.POST("/admin/address/update", handler.UpdateAddress)
 	return r
 }
 
@@ -302,6 +307,67 @@ func TestGenerateNewAddress(t *testing.T) {
 			if tt.expectCall {
 				mockSvc.AssertExpectations(t)
 			}
+		})
+	}
+}
+
+func TestUpdateAddress(t *testing.T) {
+	t.Parallel()
+	mockSrv := new(MockAddressService)
+	handler := NewAddressHandler(mockSrv, slog.Default())
+	router := setupRouter(handler)
+	mockAddressItem := dto.AddressItemDTO{
+		ID:         "1",
+		Name:       "Test Address",
+		BriefIntro: "Test intro",
+		Tags:       []string{"a", "b"},
+		Address: dto.AddressDTO{
+			City:    "test",
+			Country: "test",
+			Line1:   "test",
+			Region:  "test",
+		},
+	}
+	tests := []struct {
+		name           string
+		language       models.Language
+		body           dto.UpdateAddressRequest
+		mockOutput     *services.UpdateAddressOutput
+		mockError      error
+		expectedStatus int
+	}{
+		{
+			name:           "success",
+			language:       "EN",
+			body:           dto.UpdateAddressRequest{Language: "EN", ID: "1", Address: mockAddressItem},
+			mockOutput:     &services.UpdateAddressOutput{Address: models.AddressItem{ID: "1"}},
+			mockError:      nil,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "service error",
+			language:       "EN",
+			body:           dto.UpdateAddressRequest{Language: "EN", ID: "1", Address: mockAddressItem},
+			mockOutput:     nil,
+			mockError:      errors.New("update failed"),
+			expectedStatus: http.StatusInternalServerError,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := services.UpdateAddressInput{
+				Language: tt.language,
+				ID:       tt.body.ID,
+				Address:  dto.FromUpdateAddressDTO(tt.body),
+			}
+			mockSrv.On("UpdateAddress", mock.Anything, input).
+				Return(tt.mockOutput, tt.mockError).Once()
+			body, _ := json.Marshal(tt.body)
+			req, _ := http.NewRequest("POST", "/admin/address/update", bytes.NewBuffer(body))
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			mockSrv.AssertExpectations(t)
+			assert.Equal(t, tt.expectedStatus, w.Code)
 		})
 	}
 }

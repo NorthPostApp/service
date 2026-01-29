@@ -51,11 +51,16 @@ type GetAddressByIdOptions struct {
 	ID       string
 }
 
-// type GetAddressesByNameOptions struct {
-// 	Language models.Language
-// 	Name     string
-// 	Limit    int
-// }
+type UpdateAddressOption struct {
+	Language    models.Language
+	ID          string
+	AddressItem models.AddressItem
+}
+
+type DeleteAddressOption struct {
+	Language models.Language
+	ID       string
+}
 
 type CreateNewAddressOption struct {
 	Language    models.Language
@@ -164,9 +169,30 @@ func (r *AddressRepository) GetAddressById(ctx context.Context, opts GetAddressB
 	return &address, nil
 }
 
-// TODO
-// Get addresses by name - next step
-// func (r *AddressRepository) GetAddressByName(ctx context.Context, opt)
+func (r *AddressRepository) UpdateAddress(ctx context.Context, opts UpdateAddressOption) (*models.AddressItem, error) {
+	collectionName := getAddressCollectionName(opts.Language)
+	addressItem := opts.AddressItem
+	addressItem.UpdatedAt = time.Now().Unix() // update timestamp
+	addressItem.ID = opts.ID                  // avoid this value been modified by admin user
+	docRef := r.client.Collection(collectionName).Doc(opts.ID)
+	_, err := docRef.Set(ctx, addressItem)
+	if err != nil {
+		r.logger.Error("failed to update address", "addressID", opts.ID, "error", err)
+		return nil, fmt.Errorf("failed to update address with ID %s: %w", opts.ID, err)
+	}
+	return &addressItem, nil
+}
+
+func (r *AddressRepository) DeleteAddress(ctx context.Context, opts DeleteAddressOption) (string, error) {
+	collectionName := getAddressCollectionName(opts.Language)
+	docRef := r.client.Collection(collectionName).Doc(opts.ID)
+	_, err := docRef.Delete(ctx)
+	if err != nil {
+		r.logger.Error("failed to delete address", "addressID", opts.ID, "error", err)
+		return "", fmt.Errorf("failed to delete address with ID %s: %w", opts.ID, err)
+	}
+	return opts.ID, nil
+}
 
 // Create a new address
 func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNewAddressOption) (string, error) {

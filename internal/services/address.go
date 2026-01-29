@@ -18,6 +18,8 @@ type addressRepository interface {
 	GetAllAddresses(context.Context, repository.GetAllAddressesOptions) (*repository.GetAllAddressesResponse, error)
 	GetAddressById(context.Context, repository.GetAddressByIdOptions) (*models.AddressItem, error)
 	CreateNewAddress(context.Context, repository.CreateNewAddressOption) (string, error)
+	UpdateAddress(context.Context, repository.UpdateAddressOption) (*models.AddressItem, error)
+	DeleteAddress(context.Context, repository.DeleteAddressOption) (string, error)
 }
 
 type llmClient interface {
@@ -66,6 +68,16 @@ type CreateNewAddressInput struct {
 
 type CreateNewAddressOutput struct {
 	ID string
+}
+
+type UpdateAddressInput struct {
+	Language models.Language
+	ID       string
+	Address  models.AddressItem
+}
+
+type UpdateAddressOutput struct {
+	Address models.AddressItem
 }
 
 type GenerateAddressInput struct {
@@ -127,6 +139,19 @@ func (s *AddressService) CreateNewAddress(ctx context.Context, input CreateNewAd
 		return nil, fmt.Errorf("%w", err)
 	}
 	return &CreateNewAddressOutput{ID: id}, nil
+}
+
+func (s *AddressService) UpdateAddress(ctx context.Context, input UpdateAddressInput) (*UpdateAddressOutput, error) {
+	opts := repository.UpdateAddressOption{
+		Language:    input.Language,
+		ID:          input.ID,
+		AddressItem: input.Address,
+	}
+	addressItem, err := s.repo.UpdateAddress(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+	return &UpdateAddressOutput{Address: *addressItem}, nil
 }
 
 func (s *AddressService) GenerateNewAddress(ctx context.Context, input GenerateAddressInput) (*GenerateAddressOutput, error) {
