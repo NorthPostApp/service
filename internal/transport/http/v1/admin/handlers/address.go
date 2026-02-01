@@ -200,7 +200,7 @@ func (h *AddressHandler) UpdateAddress(c *gin.Context) {
 // @Success 200 {object} dto.DeleteAddressResponse
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /admin/address/:id [delete]
+// @Router /admin/address/{id} [delete]
 func (h *AddressHandler) DeleteAddress(c *gin.Context) {
 	id := c.Param("id")
 	if strings.TrimSpace(id) == "" {
