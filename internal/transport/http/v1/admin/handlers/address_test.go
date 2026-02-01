@@ -43,6 +43,10 @@ func (m *MockAddressService) GenerateNewAddress(ctx context.Context, input servi
 	args := m.Called(ctx, input)
 	return args.Get(0).(*services.GenerateAddressOutput), args.Error(1)
 }
+func (m *MockAddressService) DeleteAddress(ctx context.Context, input services.DeleteAddressInput) (*services.DeleteAddressOutput, error) {
+	args := m.Called(ctx, input)
+	return args.Get(0).(*services.DeleteAddressOutput), args.Error(1)
+}
 
 func setupRouter(handler *AddressHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)

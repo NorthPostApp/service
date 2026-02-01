@@ -25,6 +25,8 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.
 			address.POST("/update", h.Address.UpdateAddress)
 			// PUT
 			address.PUT("", h.Address.CreateNewAddress)
+			// DELETE
+			address.DELETE("/:id", h.Address.DeleteAddress)
 		}
 		prompt := admin.Group("/prompt")
 		{

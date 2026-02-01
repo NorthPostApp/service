@@ -5,6 +5,10 @@ import (
 	"north-post/service/internal/services"
 )
 
+type AddressID struct {
+	ID string `json:"id"`
+}
+
 type GetAllAddressesRequest struct {
 	Language  models.Language `json:"language" binding:"required"`
 	Tags      []string        `json:"tags,omitempty"`
@@ -40,6 +44,10 @@ type UpdateAddressRequest struct {
 
 type UpdateAddressResponse struct {
 	Data AddressItemDTO `json:"data"`
+}
+
+type DeleteAddressResponse struct {
+	Data AddressID `json:"data"`
 }
 
 type GenerateNewAddressRequest struct {

@@ -46,6 +46,10 @@ type GetAllAddressesResponse struct {
 	HasMore    bool
 }
 
+type RefreshTagsOptions struct {
+	Language models.Language
+}
+
 type GetAddressByIdOptions struct {
 	Language models.Language
 	ID       string
@@ -247,6 +251,10 @@ func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNew
 		return "", fmt.Errorf("failed to create address: %w", err)
 	}
 	return docRef.ID, nil
+}
+
+func (r *AddressRepository) RefreshTags(ctx context.Context, opts RefreshTagsOptions) ([]string, error) {
+	return []string{}, nil
 }
 
 // =========== Helper functions ==========

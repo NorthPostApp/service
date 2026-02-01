@@ -20,6 +20,7 @@ type addressService interface {
 	GetAddressById(ctx context.Context, input services.GetAddressByIdInput) (*services.GetAddressByIdOutput, error)
 	GetAllAddresses(ctx context.Context, input services.GetAllAddressesInput) (*services.GetAllAddressesOutput, error)
 	UpdateAddress(ctx context.Context, input services.UpdateAddressInput) (*services.UpdateAddressOutput, error)
+	DeleteAddress(ctx context.Context, input services.DeleteAddressInput) (*services.DeleteAddressOutput, error)
 }
 
 type AddressHandler struct {
@@ -185,6 +186,49 @@ func (h *AddressHandler) UpdateAddress(c *gin.Context) {
 	response := dto.UpdateAddressResponse{
 		Data: dto.ToAddressDTO(output.Address),
 	}
+	c.JSON(http.StatusOK, response)
+}
+
+// DeleteAddress godoc
+// @Summary Delete an address
+// @Description Delete an existing address entry by ID and language
+// @Tags Admin Address
+// @Accept json
+// @Produce json
+// @Param id path string true "Address ID"
+// @Param language query string true "Language code (e.g., en, zh)"
+// @Success 200 {object} dto.DeleteAddressResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /admin/address/:id [delete]
+func (h *AddressHandler) DeleteAddress(c *gin.Context) {
+	id := c.Param("id")
+	if strings.TrimSpace(id) == "" {
+		h.logger.Warn("missing address id parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Address ID is required"})
+		return
+	}
+	languageStr := c.Query("language")
+	if languageStr == "" {
+		h.logger.Warn("missing language parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Language is required"})
+		return
+	}
+	language := models.Language(languageStr)
+	if !utils.ValidateLanguage(c, language, h.logger) {
+		return
+	}
+	input := services.DeleteAddressInput{
+		Language: language,
+		ID:       id,
+	}
+	output, err := h.service.DeleteAddress(c.Request.Context(), input)
+	if err != nil {
+		h.logger.Error("failed to delete address", "id", id, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	response := dto.DeleteAddressResponse{Data: dto.AddressID{ID: output.ID}}
 	c.JSON(http.StatusOK, response)
 }
 

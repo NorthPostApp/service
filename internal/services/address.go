@@ -80,13 +80,21 @@ type UpdateAddressOutput struct {
 	Address models.AddressItem
 }
 
+type DeleteAddressInput struct {
+	Language models.Language
+	ID       string
+}
+
+type DeleteAddressOutput struct {
+	ID string
+}
+
 type GenerateAddressInput struct {
 	SystemPrompt    string
 	Prompt          string
 	Language        models.Language
 	Model           openai.ChatModel
 	ReasoningEffort openai.ReasoningEffort
-	// Temperature *float64 // might be useful in the future
 }
 
 type GenerateAddressOutput struct {
@@ -152,6 +160,18 @@ func (s *AddressService) UpdateAddress(ctx context.Context, input UpdateAddressI
 		return nil, fmt.Errorf("%w", err)
 	}
 	return &UpdateAddressOutput{Address: *addressItem}, nil
+}
+
+func (s *AddressService) DeleteAddress(ctx context.Context, input DeleteAddressInput) (*DeleteAddressOutput, error) {
+	opts := repository.DeleteAddressOption{
+		Language: input.Language,
+		ID:       input.ID,
+	}
+	deletedId, err := s.repo.DeleteAddress(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+	return &DeleteAddressOutput{ID: deletedId}, nil
 }
 
 func (s *AddressService) GenerateNewAddress(ctx context.Context, input GenerateAddressInput) (*GenerateAddressOutput, error) {
