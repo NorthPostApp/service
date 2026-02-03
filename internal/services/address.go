@@ -20,6 +20,7 @@ type addressRepository interface {
 	CreateNewAddress(context.Context, repository.CreateNewAddressOption) (string, error)
 	UpdateAddress(context.Context, repository.UpdateAddressOption) (*models.AddressItem, error)
 	DeleteAddress(context.Context, repository.DeleteAddressOption) (string, error)
+	RefreshTags(context.Context, repository.RefreshTagsOption) (*models.TagsRecord, error)
 }
 
 type llmClient interface {
@@ -99,6 +100,14 @@ type GenerateAddressInput struct {
 
 type GenerateAddressOutput struct {
 	Addresses []models.AddressItem
+}
+
+type RefreshTagsInput struct {
+	Language models.Language
+}
+
+type RefreshTagsOutput struct {
+	TagsRecord models.TagsRecord
 }
 
 func (s *AddressService) GetAllAddresses(ctx context.Context, input GetAllAddressesInput) (*GetAllAddressesOutput, error) {
@@ -207,4 +216,13 @@ func (s *AddressService) GenerateNewAddress(ctx context.Context, input GenerateA
 		addresses = append(addresses, addressItem)
 	}
 	return &GenerateAddressOutput{Addresses: addresses}, nil
+}
+
+func (s *AddressService) RefreshTags(ctx context.Context, input RefreshTagsInput) (*RefreshTagsOutput, error) {
+	opts := repository.RefreshTagsOption{Language: input.Language}
+	record, err := s.repo.RefreshTags(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to refresh tags: %w", err)
+	}
+	return &RefreshTagsOutput{TagsRecord: *record}, nil
 }

@@ -47,12 +47,17 @@ func (m *MockAddressService) DeleteAddress(ctx context.Context, input services.D
 	args := m.Called(ctx, input)
 	return args.Get(0).(*services.DeleteAddressOutput), args.Error(1)
 }
+func (m *MockAddressService) RefreshTags(ctx context.Context, input services.RefreshTagsInput) (*services.RefreshTagsOutput, error) {
+	args := m.Called(ctx, input)
+	return args.Get(0).(*services.RefreshTagsOutput), args.Error(1)
+}
 
 func setupRouter(handler *AddressHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	r.POST("/admin/address", handler.GetAllAddresses)
 	r.GET("/admin/address/:id", handler.GetAddressById)
+	r.GET("/admin/address/tags/refresh", handler.RefreshTags)
 	r.DELETE("/admin/address/:id", handler.DeleteAddress)
 	r.PUT("/admin/address", handler.CreateNewAddress)
 	r.POST("/admin/address/generate", handler.GenerateNewAddress)
@@ -492,6 +497,68 @@ func TestDeleteAddress(t *testing.T) {
 			if tt.mockOutput != nil {
 				mockSrv.AssertExpectations(t)
 			}
+		})
+	}
+}
+
+func TestRefreshTags(t *testing.T) {
+	t.Parallel()
+	mockSrv := new(MockAddressService)
+	handler := NewAddressHandler(mockSrv, slog.Default())
+	router := setupRouter(handler)
+	tests := []struct {
+		name           string
+		url            string
+		mockOutput     *services.RefreshTagsOutput
+		mockError      error
+		expectedStatus int
+	}{
+		{
+			name: "success",
+			url:  "/admin/address/tags/refresh?language=zh",
+			mockOutput: &services.RefreshTagsOutput{TagsRecord: models.TagsRecord{
+				RefreshedAt: 123,
+				Tags:        map[string][]string{"test": {"test", "test2"}}},
+			},
+			mockError:      nil,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "failed request",
+			url:            "/admin/address/tags/refresh?language=zh",
+			mockOutput:     nil,
+			mockError:      errors.New("failed request"),
+			expectedStatus: http.StatusInternalServerError,
+		},
+		{
+			name: "missing language",
+			url:  "/admin/address/tags/refresh",
+			mockOutput: &services.RefreshTagsOutput{TagsRecord: models.TagsRecord{
+				RefreshedAt: 123,
+				Tags:        map[string][]string{"test": {"test", "test2"}}},
+			},
+			mockError:      nil,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name: "invalid language",
+			url:  "/admin/address/tags/refresh?language=abc",
+			mockOutput: &services.RefreshTagsOutput{TagsRecord: models.TagsRecord{
+				RefreshedAt: 123,
+				Tags:        map[string][]string{"test": {"test", "test2"}}},
+			},
+			mockError:      nil,
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockSrv.On("RefreshTags", mock.Anything, mock.Anything).
+				Return(tt.mockOutput, tt.mockError).Once()
+			req, _ := http.NewRequest("GET", tt.url, nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			assert.Equal(t, tt.expectedStatus, w.Code)
 		})
 	}
 }

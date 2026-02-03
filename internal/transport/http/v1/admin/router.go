@@ -19,6 +19,7 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.
 		{
 			// GET
 			address.GET("/:id", h.Address.GetAddressById)
+			address.GET("/tags/refresh", h.Address.RefreshTags)
 			// POST
 			address.POST("", h.Address.GetAllAddresses)
 			address.POST("/generate", h.Address.GenerateNewAddress)

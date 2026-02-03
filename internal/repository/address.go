@@ -16,9 +16,12 @@ import (
 
 const (
 	addressTablePrefix  = "addresses"
+	tagsTablePrefix     = "tag"
 	getByNameLimit      = 10
 	tagsSimilarityLimit = 0.6
 )
+
+var tagCategories = []string{"country", "role", "figure"}
 
 type AddressRepository struct {
 	client *firestore.Client
@@ -46,7 +49,7 @@ type GetAllAddressesResponse struct {
 	HasMore    bool
 }
 
-type RefreshTagsOptions struct {
+type RefreshTagsOption struct {
 	Language models.Language
 }
 
@@ -253,13 +256,69 @@ func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNew
 	return docRef.ID, nil
 }
 
-func (r *AddressRepository) RefreshTags(ctx context.Context, opts RefreshTagsOptions) ([]string, error) {
-	return []string{}, nil
+func (r *AddressRepository) RefreshTags(ctx context.Context, opts RefreshTagsOption) (*models.TagsRecord, error) {
+	collectionName := getAddressCollectionName(opts.Language)
+	iter := r.client.Collection(collectionName).Documents(ctx)
+	defer iter.Stop()
+	tagSet := map[string]map[string]struct{}{}
+	for _, category := range tagCategories {
+		tagSet[category] = make(map[string]struct{})
+	}
+	// iterate over the database
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			r.logger.Error("failed to iterate documents for tags", "error", err)
+			return nil, fmt.Errorf("failed to fetch address for tags: %w", err)
+		}
+		var address models.AddressItem
+		if err := doc.DataTo(&address); err != nil {
+			r.logger.Warn("failed to parse document for tags", "docID", doc.Ref.ID, "error", err)
+			continue
+		}
+		for i, tag := range address.Tags {
+			if i >= len(tagCategories) {
+				r.logger.Warn("tag index exceeds tagCategories length, skipping tag", "docID", doc.Ref.ID, "tagIndex", i, "tag", tag)
+				continue
+			}
+			tagSet[tagCategories[i]][tag] = struct{}{}
+		}
+	}
+	// create unique tag set for each field
+	uniqueTagSet := make(map[string][]string)
+	for _, category := range tagCategories {
+		uniqueTags := make([]string, 0, len(tagSet[category]))
+		for tag := range tagSet[category] {
+			uniqueTags = append(uniqueTags, tag)
+		}
+		slices.Sort(uniqueTags) // sort tag alphabetically
+		uniqueTagSet[category] = uniqueTags
+	}
+	// save data to "tag" collection
+	tagCollectionName := getTagCollectionName(opts.Language)
+	tagDocRef := r.client.Collection(tagCollectionName).Doc("all_tags")
+	tagsRecord := models.TagsRecord{
+		Tags:        uniqueTagSet,
+		RefreshedAt: time.Now().Unix(),
+	}
+	_, err := tagDocRef.Set(ctx, tagsRecord)
+	if err != nil {
+		r.logger.Error("failed to save tags to collection", "error", err)
+		return nil, fmt.Errorf("failed to save tags to collection: %w", err)
+	}
+	return &tagsRecord, nil
 }
 
 // =========== Helper functions ==========
 func getAddressCollectionName(language models.Language) string {
 	return fmt.Sprintf("%s_%s_%s", os.Getenv("MODE"), addressTablePrefix, language.Get())
+}
+
+func getTagCollectionName(language models.Language) string {
+	return fmt.Sprintf("%s_%s_%s", os.Getenv("MODE"), tagsTablePrefix, language.Get())
 }
 
 func compareTags(tagsNewItem []string, tagsExistingItem []string) float32 {

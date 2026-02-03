@@ -30,3 +30,8 @@ type Address struct {
 	PostalCode   string `json:"postalCode,omitempty" firestore:"postalCode"`
 	Region       string `json:"region" firestore:"region"`
 }
+
+type TagsRecord struct {
+	Tags        map[string][]string `json:"tags" firestore:"tags"`
+	RefreshedAt int64               `json:"refreshedAt" firestore:"refreshedAt"`
+}

@@ -46,6 +46,10 @@ type UpdateAddressResponse struct {
 	Data AddressItemDTO `json:"data"`
 }
 
+type RefreshTagsResponse struct {
+	Data models.TagsRecord `json:"data"`
+}
+
 type DeleteAddressResponse struct {
 	Data AddressID `json:"data"`
 }

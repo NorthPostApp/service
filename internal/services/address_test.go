@@ -59,6 +59,15 @@ func (m *mockAddressRepository) DeleteAddress(ctx context.Context, opts reposito
 	return args.String(0), args.Error(1)
 }
 
+func (m *mockAddressRepository) RefreshTags(ctx context.Context, opts repository.RefreshTagsOption) (*models.TagsRecord, error) {
+	args := m.Called(ctx, opts)
+	var record *models.TagsRecord
+	if value := args.Get(0); value != nil {
+		record, _ = value.(*models.TagsRecord)
+	}
+	return record, args.Error(1)
+}
+
 type mockLLMClient struct {
 	mock.Mock
 }
@@ -411,4 +420,35 @@ func TestAddressService_DeleteAddress_Error(t *testing.T) {
 	output, err := service.DeleteAddress(context.Background(), input)
 	assert.NotNil(t, err)
 	assert.Nil(t, output)
+}
+
+func TestAddressService_RefreshTags(t *testing.T) {
+	t.Parallel()
+	repo := new(mockAddressRepository)
+	llm := new(mockLLMClient)
+	service := NewAddressService(repo, llm)
+	input := RefreshTagsInput{Language: "en"}
+	mockOutput := models.TagsRecord{
+		Tags: map[string][]string{
+			"test": {"a", "b"},
+		},
+		RefreshedAt: 12345,
+	}
+	repo.On("RefreshTags", mock.Anything, mock.Anything).Return(&mockOutput, nil).Once()
+	output, err := service.RefreshTags(context.Background(), input)
+	assert.NotNil(t, output)
+	assert.Nil(t, err)
+	assert.Equal(t, output.TagsRecord.RefreshedAt, mockOutput.RefreshedAt)
+}
+
+func TestAddressService_RefreshTags_Error(t *testing.T) {
+	t.Parallel()
+	repo := new(mockAddressRepository)
+	llm := new(mockLLMClient)
+	service := NewAddressService(repo, llm)
+	input := RefreshTagsInput{Language: "en"}
+	repo.On("RefreshTags", mock.Anything, mock.Anything).Return(nil, assert.AnError).Once()
+	output, err := service.RefreshTags(context.Background(), input)
+	assert.Nil(t, output)
+	assert.NotNil(t, err)
 }

@@ -21,6 +21,7 @@ type addressService interface {
 	GetAllAddresses(ctx context.Context, input services.GetAllAddressesInput) (*services.GetAllAddressesOutput, error)
 	UpdateAddress(ctx context.Context, input services.UpdateAddressInput) (*services.UpdateAddressOutput, error)
 	DeleteAddress(ctx context.Context, input services.DeleteAddressInput) (*services.DeleteAddressOutput, error)
+	RefreshTags(ctx context.Context, input services.RefreshTagsInput) (*services.RefreshTagsOutput, error)
 }
 
 type AddressHandler struct {
@@ -267,5 +268,38 @@ func (h *AddressHandler) GenerateNewAddress(c *gin.Context) {
 	response := dto.GenerateNewAddressResponse{
 		Data: dto.ToAddressDTOs(output.Addresses),
 	}
+	c.JSON(http.StatusOK, response)
+}
+
+// RefreshTags godoc
+// @Summary Refresh tag categories
+// @Description Scans all addresses in the specified language and refreshes the tag collection with unique tags from all categories (country, role, figure)
+// @Tags Admin Address
+// @Accept json
+// @Produce json
+// @Param language query string true "Language code (e.g., en, zh)"
+// @Success 200 {object} dto.RefreshTagsResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /admin/address/tags/refresh [get]
+func (h *AddressHandler) RefreshTags(c *gin.Context) {
+	languageStr := c.Query("language")
+	if languageStr == "" {
+		h.logger.Warn("missing language parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Language is required"})
+		return
+	}
+	language := models.Language(languageStr)
+	if !utils.ValidateLanguage(c, language, h.logger) {
+		return
+	}
+	input := services.RefreshTagsInput{Language: language}
+	output, err := h.service.RefreshTags(c.Request.Context(), input)
+	if err != nil {
+		h.logger.Error("failed to refresh tags", "language", language, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	response := dto.RefreshTagsResponse{Data: output.TagsRecord}
 	c.JSON(http.StatusOK, response)
 }
