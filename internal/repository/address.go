@@ -17,6 +17,7 @@ import (
 const (
 	addressTablePrefix  = "addresses"
 	tagsTablePrefix     = "tag"
+	tagDocName          = "all_tags"
 	getByNameLimit      = 10
 	tagsSimilarityLimit = 0.6
 )
@@ -50,6 +51,10 @@ type GetAllAddressesResponse struct {
 }
 
 type RefreshTagsOption struct {
+	Language models.Language
+}
+
+type GetAllTagsOption struct {
 	Language models.Language
 }
 
@@ -92,7 +97,7 @@ func (r *AddressRepository) GetAllAddresses(ctx context.Context, opts GetAllAddr
 		aggregationResult, err := aggregationQuery.Get(ctx)
 		if err != nil {
 			r.logger.Error("failed to get count", "error", err)
-			return nil, fmt.Errorf("failed to get total count")
+			return nil, fmt.Errorf("failed to get total count: %w", err)
 		}
 		count, ok := aggregationResult["total"]
 		if !ok {
@@ -299,7 +304,7 @@ func (r *AddressRepository) RefreshTags(ctx context.Context, opts RefreshTagsOpt
 	}
 	// save data to "tag" collection
 	tagCollectionName := getTagCollectionName(opts.Language)
-	tagDocRef := r.client.Collection(tagCollectionName).Doc("all_tags")
+	tagDocRef := r.client.Collection(tagCollectionName).Doc(tagDocName)
 	tagsRecord := models.TagsRecord{
 		Tags:        uniqueTagSet,
 		RefreshedAt: time.Now().Unix(),
@@ -308,6 +313,22 @@ func (r *AddressRepository) RefreshTags(ctx context.Context, opts RefreshTagsOpt
 	if err != nil {
 		r.logger.Error("failed to save tags to collection", "error", err)
 		return nil, fmt.Errorf("failed to save tags to collection: %w", err)
+	}
+	return &tagsRecord, nil
+}
+
+func (r *AddressRepository) GetAllTags(ctx context.Context, opts GetAllTagsOption) (*models.TagsRecord, error) {
+	collectionName := getTagCollectionName(opts.Language)
+	docRef := r.client.Collection(collectionName).Doc(tagDocName)
+	doc, err := docRef.Get(ctx)
+	if err != nil {
+		r.logger.Error("failed to get all tags", "error", err)
+		return nil, fmt.Errorf("failed to get all tags: %w", err)
+	}
+	var tagsRecord models.TagsRecord
+	if err := doc.DataTo(&tagsRecord); err != nil {
+		r.logger.Error("failed to parse tags record", "error", err)
+		return nil, fmt.Errorf("failed to parse tags record: %w", err)
 	}
 	return &tagsRecord, nil
 }

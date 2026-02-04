@@ -15,16 +15,22 @@ import (
 const defaultPageSize = 100
 
 type addressRepository interface {
-	GetAllAddresses(context.Context, repository.GetAllAddressesOptions) (*repository.GetAllAddressesResponse, error)
+	GetAllAddresses(context.Context, repository.GetAllAddressesOptions) (
+		*repository.GetAllAddressesResponse, error)
 	GetAddressById(context.Context, repository.GetAddressByIdOptions) (*models.AddressItem, error)
 	CreateNewAddress(context.Context, repository.CreateNewAddressOption) (string, error)
 	UpdateAddress(context.Context, repository.UpdateAddressOption) (*models.AddressItem, error)
 	DeleteAddress(context.Context, repository.DeleteAddressOption) (string, error)
 	RefreshTags(context.Context, repository.RefreshTagsOption) (*models.TagsRecord, error)
+	GetAllTags(context.Context, repository.GetAllTagsOption) (*models.TagsRecord, error)
 }
 
 type llmClient interface {
-	StructuredCompletion(context.Context, infra.StructuredCompletionOptions, interface{}, interface{}) error
+	StructuredCompletion(
+		context.Context,
+		infra.StructuredCompletionOptions,
+		interface{},
+		interface{}) error
 }
 
 type AddressService struct {
@@ -110,7 +116,18 @@ type RefreshTagsOutput struct {
 	TagsRecord models.TagsRecord
 }
 
-func (s *AddressService) GetAllAddresses(ctx context.Context, input GetAllAddressesInput) (*GetAllAddressesOutput, error) {
+type GetAllTagsInput struct {
+	Language models.Language
+}
+
+type GetAllTagsOutput struct {
+	TagsRecord models.TagsRecord
+}
+
+func (s *AddressService) GetAllAddresses(
+	ctx context.Context,
+	input GetAllAddressesInput,
+) (*GetAllAddressesOutput, error) {
 	pageSize := input.PageSize
 	if pageSize <= 0 || pageSize > defaultPageSize {
 		pageSize = defaultPageSize
@@ -218,11 +235,26 @@ func (s *AddressService) GenerateNewAddress(ctx context.Context, input GenerateA
 	return &GenerateAddressOutput{Addresses: addresses}, nil
 }
 
-func (s *AddressService) RefreshTags(ctx context.Context, input RefreshTagsInput) (*RefreshTagsOutput, error) {
+func (s *AddressService) RefreshTags(
+	ctx context.Context,
+	input RefreshTagsInput,
+) (*RefreshTagsOutput, error) {
 	opts := repository.RefreshTagsOption{Language: input.Language}
 	record, err := s.repo.RefreshTags(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to refresh tags: %w", err)
+		return nil, fmt.Errorf("%w", err)
 	}
 	return &RefreshTagsOutput{TagsRecord: *record}, nil
+}
+
+func (s *AddressService) GetAllTags(
+	ctx context.Context,
+	input GetAllTagsInput,
+) (*GetAllTagsOutput, error) {
+	opts := repository.GetAllTagsOption{Language: input.Language}
+	record, err := s.repo.GetAllTags(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+	return &GetAllTagsOutput{TagsRecord: *record}, nil
 }

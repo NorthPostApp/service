@@ -17,7 +17,10 @@ type mockAddressRepository struct {
 	mock.Mock
 }
 
-func (m *mockAddressRepository) GetAllAddresses(ctx context.Context, opts repository.GetAllAddressesOptions) (*repository.GetAllAddressesResponse, error) {
+func (m *mockAddressRepository) GetAllAddresses(
+	ctx context.Context,
+	opts repository.GetAllAddressesOptions,
+) (*repository.GetAllAddressesResponse, error) {
 	args := m.Called(ctx, opts)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -25,7 +28,10 @@ func (m *mockAddressRepository) GetAllAddresses(ctx context.Context, opts reposi
 	return args.Get(0).(*repository.GetAllAddressesResponse), args.Error(1)
 }
 
-func (m *mockAddressRepository) GetAddressById(ctx context.Context, opts repository.GetAddressByIdOptions) (*models.AddressItem, error) {
+func (m *mockAddressRepository) GetAddressById(
+	ctx context.Context,
+	opts repository.GetAddressByIdOptions,
+) (*models.AddressItem, error) {
 	args := m.Called(ctx, opts)
 	var address *models.AddressItem
 	if value := args.Get(0); value != nil {
@@ -34,7 +40,10 @@ func (m *mockAddressRepository) GetAddressById(ctx context.Context, opts reposit
 	return address, args.Error(1)
 }
 
-func (m *mockAddressRepository) CreateNewAddress(ctx context.Context, opts repository.CreateNewAddressOption) (string, error) {
+func (m *mockAddressRepository) CreateNewAddress(
+	ctx context.Context,
+	opts repository.CreateNewAddressOption,
+) (string, error) {
 	args := m.Called(ctx, opts)
 	if args.Get(0) == nil {
 		return "", args.Error(1)
@@ -42,7 +51,10 @@ func (m *mockAddressRepository) CreateNewAddress(ctx context.Context, opts repos
 	return args.String(0), args.Error(1)
 }
 
-func (m *mockAddressRepository) UpdateAddress(ctx context.Context, opts repository.UpdateAddressOption) (*models.AddressItem, error) {
+func (m *mockAddressRepository) UpdateAddress(
+	ctx context.Context,
+	opts repository.UpdateAddressOption,
+) (*models.AddressItem, error) {
 	args := m.Called(ctx, opts)
 	var address *models.AddressItem
 	if value := args.Get(0); value != nil {
@@ -51,7 +63,10 @@ func (m *mockAddressRepository) UpdateAddress(ctx context.Context, opts reposito
 	return address, args.Error(1)
 }
 
-func (m *mockAddressRepository) DeleteAddress(ctx context.Context, opts repository.DeleteAddressOption) (string, error) {
+func (m *mockAddressRepository) DeleteAddress(
+	ctx context.Context,
+	opts repository.DeleteAddressOption,
+) (string, error) {
 	args := m.Called(ctx, opts)
 	if args.Get(0) == nil {
 		return "", args.Error(1)
@@ -59,7 +74,22 @@ func (m *mockAddressRepository) DeleteAddress(ctx context.Context, opts reposito
 	return args.String(0), args.Error(1)
 }
 
-func (m *mockAddressRepository) RefreshTags(ctx context.Context, opts repository.RefreshTagsOption) (*models.TagsRecord, error) {
+func (m *mockAddressRepository) RefreshTags(
+	ctx context.Context,
+	opts repository.RefreshTagsOption,
+) (*models.TagsRecord, error) {
+	args := m.Called(ctx, opts)
+	var record *models.TagsRecord
+	if value := args.Get(0); value != nil {
+		record, _ = value.(*models.TagsRecord)
+	}
+	return record, args.Error(1)
+}
+
+func (m *mockAddressRepository) GetAllTags(
+	ctx context.Context,
+	opts repository.GetAllTagsOption,
+) (*models.TagsRecord, error) {
 	args := m.Called(ctx, opts)
 	var record *models.TagsRecord
 	if value := args.Get(0); value != nil {
@@ -72,7 +102,11 @@ type mockLLMClient struct {
 	mock.Mock
 }
 
-func (m *mockLLMClient) StructuredCompletion(ctx context.Context, opts infra.StructuredCompletionOptions, schemaInstance interface{}, result interface{}) error {
+func (m *mockLLMClient) StructuredCompletion(
+	ctx context.Context,
+	opts infra.StructuredCompletionOptions,
+	schemaInstance interface{},
+	result interface{}) error {
 	args := m.Called(ctx, opts, schemaInstance, result)
 	if args.Get(0) != nil && result != nil {
 		if out, ok := result.(*models.BatchAddressGenerationSchema); ok {
@@ -449,6 +483,37 @@ func TestAddressService_RefreshTags_Error(t *testing.T) {
 	input := RefreshTagsInput{Language: "en"}
 	repo.On("RefreshTags", mock.Anything, mock.Anything).Return(nil, assert.AnError).Once()
 	output, err := service.RefreshTags(context.Background(), input)
+	assert.Nil(t, output)
+	assert.NotNil(t, err)
+}
+
+func TestAddressService_GetAllTags(t *testing.T) {
+	t.Parallel()
+	repo := new(mockAddressRepository)
+	llm := new(mockLLMClient)
+	service := NewAddressService(repo, llm)
+	input := GetAllTagsInput{Language: "en"}
+	mockOutput := models.TagsRecord{
+		Tags: map[string][]string{
+			"test": {"a", "b"},
+		},
+		RefreshedAt: 12345,
+	}
+	repo.On("GetAllTags", mock.Anything, mock.Anything).Return(&mockOutput, nil).Once()
+	output, err := service.GetAllTags(context.Background(), input)
+	assert.NotNil(t, output)
+	assert.Nil(t, err)
+	assert.Equal(t, output.TagsRecord.RefreshedAt, mockOutput.RefreshedAt)
+}
+
+func TestAddressService_GetAllTags_Error(t *testing.T) {
+	t.Parallel()
+	repo := new(mockAddressRepository)
+	llm := new(mockLLMClient)
+	service := NewAddressService(repo, llm)
+	input := GetAllTagsInput{Language: "en"}
+	repo.On("GetAllTags", mock.Anything, mock.Anything).Return(nil, assert.AnError).Once()
+	output, err := service.GetAllTags(context.Background(), input)
 	assert.Nil(t, output)
 	assert.NotNil(t, err)
 }

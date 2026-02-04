@@ -23,33 +23,61 @@ type MockAddressService struct {
 	mock.Mock
 }
 
-func (m *MockAddressService) GetAllAddresses(ctx context.Context, input services.GetAllAddressesInput) (*services.GetAllAddressesOutput, error) {
+func (m *MockAddressService) GetAllAddresses(
+	ctx context.Context,
+	input services.GetAllAddressesInput,
+) (*services.GetAllAddressesOutput, error) {
 	args := m.Called(ctx, input)
 	return args.Get(0).(*services.GetAllAddressesOutput), args.Error(1)
 }
-func (m *MockAddressService) GetAddressById(ctx context.Context, input services.GetAddressByIdInput) (*services.GetAddressByIdOutput, error) {
+func (m *MockAddressService) GetAddressById(
+	ctx context.Context,
+	input services.GetAddressByIdInput,
+) (*services.GetAddressByIdOutput, error) {
 	args := m.Called(ctx, input)
 	return args.Get(0).(*services.GetAddressByIdOutput), args.Error(1)
 }
-func (m *MockAddressService) CreateNewAddress(ctx context.Context, input services.CreateNewAddressInput) (*services.CreateNewAddressOutput, error) {
+func (m *MockAddressService) CreateNewAddress(
+	ctx context.Context,
+	input services.CreateNewAddressInput,
+) (*services.CreateNewAddressOutput, error) {
 	args := m.Called(ctx, input)
 	return args.Get(0).(*services.CreateNewAddressOutput), args.Error(1)
 }
-func (m *MockAddressService) UpdateAddress(ctx context.Context, input services.UpdateAddressInput) (*services.UpdateAddressOutput, error) {
+func (m *MockAddressService) UpdateAddress(
+	ctx context.Context,
+	input services.UpdateAddressInput,
+) (*services.UpdateAddressOutput, error) {
 	args := m.Called(ctx, input)
 	return args.Get(0).(*services.UpdateAddressOutput), args.Error(1)
 }
-func (m *MockAddressService) GenerateNewAddress(ctx context.Context, input services.GenerateAddressInput) (*services.GenerateAddressOutput, error) {
+func (m *MockAddressService) GenerateNewAddress(
+	ctx context.Context,
+	input services.GenerateAddressInput,
+) (*services.GenerateAddressOutput, error) {
 	args := m.Called(ctx, input)
 	return args.Get(0).(*services.GenerateAddressOutput), args.Error(1)
 }
-func (m *MockAddressService) DeleteAddress(ctx context.Context, input services.DeleteAddressInput) (*services.DeleteAddressOutput, error) {
+func (m *MockAddressService) DeleteAddress(
+	ctx context.Context,
+	input services.DeleteAddressInput,
+) (*services.DeleteAddressOutput, error) {
 	args := m.Called(ctx, input)
 	return args.Get(0).(*services.DeleteAddressOutput), args.Error(1)
 }
-func (m *MockAddressService) RefreshTags(ctx context.Context, input services.RefreshTagsInput) (*services.RefreshTagsOutput, error) {
+func (m *MockAddressService) RefreshTags(
+	ctx context.Context,
+	input services.RefreshTagsInput,
+) (*services.RefreshTagsOutput, error) {
 	args := m.Called(ctx, input)
 	return args.Get(0).(*services.RefreshTagsOutput), args.Error(1)
+}
+func (m *MockAddressService) GetAllTags(
+	ctx context.Context,
+	input services.GetAllTagsInput,
+) (*services.GetAllTagsOutput, error) {
+	args := m.Called(ctx, input)
+	return args.Get(0).(*services.GetAllTagsOutput), args.Error(1)
 }
 
 func setupRouter(handler *AddressHandler) *gin.Engine {
@@ -57,7 +85,7 @@ func setupRouter(handler *AddressHandler) *gin.Engine {
 	r := gin.Default()
 	r.POST("/admin/address", handler.GetAllAddresses)
 	r.GET("/admin/address/:id", handler.GetAddressById)
-	r.GET("/admin/address/tags/refresh", handler.RefreshTags)
+	r.GET("/admin/address/tags", handler.GetAllTags)
 	r.DELETE("/admin/address/:id", handler.DeleteAddress)
 	r.PUT("/admin/address", handler.CreateNewAddress)
 	r.POST("/admin/address/generate", handler.GenerateNewAddress)
@@ -501,7 +529,7 @@ func TestDeleteAddress(t *testing.T) {
 	}
 }
 
-func TestRefreshTags(t *testing.T) {
+func TestGetAllTags_RefreshTags(t *testing.T) {
 	t.Parallel()
 	mockSrv := new(MockAddressService)
 	handler := NewAddressHandler(mockSrv, slog.Default())
@@ -515,7 +543,7 @@ func TestRefreshTags(t *testing.T) {
 	}{
 		{
 			name: "success",
-			url:  "/admin/address/tags/refresh?language=zh",
+			url:  "/admin/address/tags?language=zh&refresh=true",
 			mockOutput: &services.RefreshTagsOutput{TagsRecord: models.TagsRecord{
 				RefreshedAt: 123,
 				Tags:        map[string][]string{"test": {"test", "test2"}}},
@@ -525,29 +553,30 @@ func TestRefreshTags(t *testing.T) {
 		},
 		{
 			name:           "failed request",
-			url:            "/admin/address/tags/refresh?language=zh",
+			url:            "/admin/address/tags?language=zh&refresh=true",
 			mockOutput:     nil,
 			mockError:      errors.New("failed request"),
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "missing language",
-			url:  "/admin/address/tags/refresh",
-			mockOutput: &services.RefreshTagsOutput{TagsRecord: models.TagsRecord{
-				RefreshedAt: 123,
-				Tags:        map[string][]string{"test": {"test", "test2"}}},
-			},
-			mockError:      nil,
+			name:           "missing language",
+			url:            "/admin/address/tags",
+			mockOutput:     nil,
+			mockError:      errors.New("failed request"),
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name: "invalid language",
-			url:  "/admin/address/tags/refresh?language=abc",
-			mockOutput: &services.RefreshTagsOutput{TagsRecord: models.TagsRecord{
-				RefreshedAt: 123,
-				Tags:        map[string][]string{"test": {"test", "test2"}}},
-			},
-			mockError:      nil,
+			name:           "invalid language",
+			url:            "/admin/address/tags?language=abc",
+			mockOutput:     nil,
+			mockError:      errors.New("failed request"),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "invalid refresh query",
+			url:            "/admin/address/tags?language=en&refresh=abc",
+			mockOutput:     nil,
+			mockError:      errors.New("failed request"),
 			expectedStatus: http.StatusBadRequest,
 		},
 	}
@@ -559,6 +588,64 @@ func TestRefreshTags(t *testing.T) {
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.mockError == nil {
+				mockSrv.AssertExpectations(t)
+			}
+		})
+	}
+}
+
+func TestGetAllTags_GetAllTags(t *testing.T) {
+	t.Parallel()
+	mockSrv := new(MockAddressService)
+	handler := NewAddressHandler(mockSrv, slog.Default())
+	router := setupRouter(handler)
+	tests := []struct {
+		name           string
+		url            string
+		mockOutput     *services.GetAllTagsOutput
+		mockError      error
+		expectedStatus int
+	}{
+		{
+			name: "success with refresh parameter",
+			url:  "/admin/address/tags?language=zh&refresh=false",
+			mockOutput: &services.GetAllTagsOutput{TagsRecord: models.TagsRecord{
+				RefreshedAt: 123,
+				Tags:        map[string][]string{"test": {"test", "test2"}}},
+			},
+			mockError:      nil,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name: "success without refresh parameter",
+			url:  "/admin/address/tags?language=zh",
+			mockOutput: &services.GetAllTagsOutput{TagsRecord: models.TagsRecord{
+				RefreshedAt: 123,
+				Tags:        map[string][]string{"test": {"test", "test2"}}},
+			},
+			mockError:      nil,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "failed request",
+			url:            "/admin/address/tags?language=zh",
+			mockOutput:     nil,
+			mockError:      errors.New("failed request"),
+			expectedStatus: http.StatusInternalServerError,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockSrv.On("GetAllTags", mock.Anything, mock.Anything).
+				Return(tt.mockOutput, tt.mockError).Once()
+			req, _ := http.NewRequest("GET", tt.url, nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.mockError == nil {
+				mockSrv.AssertExpectations(t)
+			}
 		})
 	}
 }

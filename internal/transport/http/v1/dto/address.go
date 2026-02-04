@@ -46,7 +46,7 @@ type UpdateAddressResponse struct {
 	Data AddressItemDTO `json:"data"`
 }
 
-type RefreshTagsResponse struct {
+type GetTagsResponse struct {
 	Data models.TagsRecord `json:"data"`
 }
 

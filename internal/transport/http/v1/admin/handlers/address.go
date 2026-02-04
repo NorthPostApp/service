@@ -8,6 +8,7 @@ import (
 	"north-post/service/internal/services"
 	"north-post/service/internal/transport/http/v1/dto"
 	"north-post/service/internal/transport/http/v1/utils"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -22,6 +23,7 @@ type addressService interface {
 	UpdateAddress(ctx context.Context, input services.UpdateAddressInput) (*services.UpdateAddressOutput, error)
 	DeleteAddress(ctx context.Context, input services.DeleteAddressInput) (*services.DeleteAddressOutput, error)
 	RefreshTags(ctx context.Context, input services.RefreshTagsInput) (*services.RefreshTagsOutput, error)
+	GetAllTags(ctx context.Context, input services.GetAllTagsInput) (*services.GetAllTagsOutput, error)
 }
 
 type AddressHandler struct {
@@ -281,9 +283,10 @@ func (h *AddressHandler) GenerateNewAddress(c *gin.Context) {
 // @Success 200 {object} dto.RefreshTagsResponse
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /admin/address/tags/refresh [get]
-func (h *AddressHandler) RefreshTags(c *gin.Context) {
-	languageStr := c.Query("language")
+// @Router /admin/address/tags [get]
+func (h *AddressHandler) GetAllTags(c *gin.Context) {
+	languageStr := strings.TrimSpace(c.Query("language"))
+	refreshStr := strings.TrimSpace(c.Query("refresh"))
 	if languageStr == "" {
 		h.logger.Warn("missing language parameter")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Language is required"})
@@ -293,13 +296,31 @@ func (h *AddressHandler) RefreshTags(c *gin.Context) {
 	if !utils.ValidateLanguage(c, language, h.logger) {
 		return
 	}
-	input := services.RefreshTagsInput{Language: language}
-	output, err := h.service.RefreshTags(c.Request.Context(), input)
-	if err != nil {
-		h.logger.Error("failed to refresh tags", "language", language, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	shouldRefresh, err := strconv.ParseBool(refreshStr)
+	if err != nil && refreshStr != "" {
+		h.logger.Error("failed to parse refresh query to boolean", "query", refreshStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid refresh parameter"})
 		return
 	}
-	response := dto.RefreshTagsResponse{Data: output.TagsRecord}
+	var response dto.GetTagsResponse
+	if shouldRefresh {
+		input := services.RefreshTagsInput{Language: language}
+		output, err := h.service.RefreshTags(c.Request.Context(), input)
+		if err != nil {
+			h.logger.Error("failed to refresh tags", "language", language, "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		response = dto.GetTagsResponse{Data: output.TagsRecord}
+	} else {
+		input := services.GetAllTagsInput{Language: language}
+		output, err := h.service.GetAllTags(c.Request.Context(), input)
+		if err != nil {
+			h.logger.Error("failed to get all tags", "language", language, "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		response = dto.GetTagsResponse{Data: output.TagsRecord}
+	}
 	c.JSON(http.StatusOK, response)
 }
