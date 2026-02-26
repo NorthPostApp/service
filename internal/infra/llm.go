@@ -11,50 +11,152 @@ import (
 	"github.com/akane9506/gptschema"
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
+	"google.golang.org/genai"
 )
 
 type LLMClient struct {
-	LLM    *openai.Client
+	OpenAI *openai.Client
+	Gemini *genai.Client
 	logger *slog.Logger // LLM needs a logger for process monitoring
 }
 
 func NewLLMClient(logger *slog.Logger) (*LLMClient, error) {
 	openaiApiKey := os.Getenv("OPENAI_API_KEY")
+	geminiApiKey := os.Getenv("GEMINI_API_KEY")
 	if openaiApiKey == "" {
 		return nil, fmt.Errorf("OPENAI_API_KEY environment variable is required")
 	}
-	client := openai.NewClient(option.WithAPIKey(openaiApiKey))
-	logger.Info("llm client initialized successfully")
-	return &LLMClient{LLM: &client, logger: logger}, nil
+	openAIClient := openai.NewClient(option.WithAPIKey(openaiApiKey))
+	logger.Info("OpenAI client initialized successfully")
+	geminiClient, err := genai.NewClient(context.Background(), &genai.ClientConfig{APIKey: geminiApiKey})
+	if err != nil {
+		logger.Error("failed to initialize Gemini client", "error", err)
+	}
+	logger.Info("Gemini client initialized successfully")
+	return &LLMClient{OpenAI: &openAIClient, Gemini: geminiClient, logger: logger}, nil
 }
 
 type StructuredCompletionOptions struct {
 	Prompt          string
 	SystemPrompt    string
-	SchemaName      string
-	Description     string
-	Model           openai.ChatModel
-	ReasoningEffort openai.ReasoningEffort
-	// we might need these two params in the future
-	// Temperature *float64
-	// MaxTokens   *int64
+	Model           string
+	ReasoningEffort string
+	ThinkingLevel   string
 }
 
+type OpenAIStructuredCompletionOptions struct {
+	Prompt          string
+	SystemPrompt    string
+	SchemaName      string
+	Description     string
+	Model           string
+	ReasoningEffort openai.ReasoningEffort
+}
+
+type GeminiStructuredCompletionOptions struct {
+	Prompt        string
+	SystemPrompt  string
+	Model         string
+	ThinkingLevel genai.ThinkingLevel
+}
+
+// The structured completion wrapper function to help route the generation task to corresponsing LLM provider
 func (l *LLMClient) StructuredCompletion(
 	ctx context.Context,
 	opts StructuredCompletionOptions,
 	schemaInstance interface{},
-	result interface{},
-) error {
+	result interface{}) error {
+	model := opts.Model
+	// Check model type
+	if !(strings.HasPrefix(model, "gpt") || strings.HasPrefix(model, "gemini")) {
+		l.logger.Error("invalid model name", "error", "The model should be starts with either gpt or gemini", "model", model)
+		return fmt.Errorf("invalid model name, model name should start with either 'gpt' or 'gemini'")
+	}
+	// Avoid empty prompt
+	if strings.TrimSpace(opts.Prompt) == "" {
+		l.logger.Error("invalid prompt", "error", "the prompt shouldn't be empty")
+		return fmt.Errorf("invalid prompt, the prompt shouldn't be an empty string")
+	}
 	schema, err := gptschema.GenerateSchema(schemaInstance)
 	if err != nil {
+		l.logger.Error("failed to generate schema: %w", "error", err)
 		return fmt.Errorf("failed to generate schema: %w", err)
 	}
+	if strings.HasPrefix(model, "gemini") {
+		l.logger.Info("Address generation request", "model", model, "thinking level", opts.ThinkingLevel)
+		geminiOpts := GeminiStructuredCompletionOptions{
+			Prompt:        opts.Prompt,
+			SystemPrompt:  opts.SystemPrompt,
+			Model:         model,
+			ThinkingLevel: genai.ThinkingLevel(opts.ThinkingLevel),
+		}
+		err := l.StructuredCompletionGemini(ctx, geminiOpts, schema, result)
+		if err != nil {
+			return err
+		}
+	} else if strings.HasPrefix(model, "gpt") {
+		l.logger.Info("Address generation request", "model", model, "reasoning effort", opts.ReasoningEffort)
+		gptOpts := OpenAIStructuredCompletionOptions{
+			SystemPrompt:    opts.SystemPrompt,
+			Prompt:          opts.Prompt,
+			SchemaName:      "address_generation",
+			Description:     "Generate a structured address with metadata",
+			Model:           opts.Model,
+			ReasoningEffort: openai.ReasoningEffort(opts.ReasoningEffort),
+		}
+		err := l.StructuredCompletionOpenAI(ctx, gptOpts, schema, result)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Generate structured contents with Gemini models
+func (l *LLMClient) StructuredCompletionGemini(ctx context.Context, opts GeminiStructuredCompletionOptions, schema interface{}, result interface{}) error {
+	model := opts.Model
+	config := &genai.GenerateContentConfig{
+		ResponseMIMEType:   "application/json",
+		ResponseJsonSchema: schema,
+		SystemInstruction: &genai.Content{
+			Parts: []*genai.Part{
+				{Text: opts.SystemPrompt},
+			},
+		},
+	}
+	// Only add thinking level config to the gemini 3 serious models
+	if strings.HasPrefix(model, "gemini-3") {
+		config.ThinkingConfig = &genai.ThinkingConfig{
+			IncludeThoughts: false,
+			ThinkingLevel:   genai.ThinkingLevelLow,
+		}
+	}
+	output, err := l.Gemini.Models.GenerateContent(ctx, model, genai.Text(opts.Prompt), config)
+	if err != nil {
+		l.logger.Error("failed to generate content", "model", model, "error", err)
+		return fmt.Errorf("failed to generate content: %w", err)
+	}
+	if len(output.Candidates) == 0 {
+		l.logger.Error("no candidates returned from gemini")
+		return fmt.Errorf("no candidates returned")
+	}
+	jsonContent := output.Text() // one more error handling here
+	if err := json.Unmarshal([]byte(jsonContent), result); err != nil {
+		l.logger.Error("failed to unmarshal response", "error", err, "content", jsonContent)
+		return fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+	return nil
+}
+
+// Generate structured contents with OpenAI models
+func (l *LLMClient) StructuredCompletionOpenAI(
+	ctx context.Context,
+	opts OpenAIStructuredCompletionOptions,
+	schema interface{},
+	result interface{},
+) error {
 	// Set default model and effort if not provided
 	model := opts.Model
-	if model == "" {
-		model = openai.ChatModelGPT5Mini
-	}
 	// Build the schema parameter
 	schemaParam := openai.ResponseFormatJSONSchemaJSONSchemaParam{
 		Name:        opts.SchemaName,
@@ -67,9 +169,7 @@ func (l *LLMClient) StructuredCompletion(
 	if strings.TrimSpace(opts.SystemPrompt) != "" {
 		messages = append(messages, openai.SystemMessage(opts.SystemPrompt))
 	}
-	if strings.TrimSpace(opts.Prompt) != "" {
-		messages = append(messages, openai.UserMessage(opts.Prompt))
-	}
+	messages = append(messages, openai.UserMessage(opts.Prompt))
 	if len(messages) == 0 {
 		l.logger.Error("no system and user message provided")
 		return fmt.Errorf("no user or system message provided")
@@ -90,9 +190,9 @@ func (l *LLMClient) StructuredCompletion(
 		completionParams.ReasoningEffort = effort
 	}
 	// query the chat completion API
-	chat, err := l.LLM.Chat.Completions.New(ctx, completionParams)
+	chat, err := l.OpenAI.Chat.Completions.New(ctx, completionParams)
 	if err != nil {
-		l.logger.Error("chat completion failed", "error", err)
+		l.logger.Error("chat completion failed", "model", model, "error", err)
 		return fmt.Errorf("chat completion failed: %w", err)
 	}
 	// check if we got a valid response
