@@ -26,11 +26,15 @@ func NewLLMClient(logger *slog.Logger) (*LLMClient, error) {
 	if openaiApiKey == "" {
 		return nil, fmt.Errorf("OPENAI_API_KEY environment variable is required")
 	}
+	if geminiApiKey == "" {
+		return nil, fmt.Errorf("GEMINI_API_KEY environment variable is required")
+	}
 	openAIClient := openai.NewClient(option.WithAPIKey(openaiApiKey))
 	logger.Info("OpenAI client initialized successfully")
 	geminiClient, err := genai.NewClient(context.Background(), &genai.ClientConfig{APIKey: geminiApiKey})
 	if err != nil {
 		logger.Error("failed to initialize Gemini client", "error", err)
+		return nil, fmt.Errorf("failed to initialize Gemini: %w", err)
 	}
 	logger.Info("Gemini client initialized successfully")
 	return &LLMClient{OpenAI: &openAIClient, Gemini: geminiClient, logger: logger}, nil
@@ -60,7 +64,7 @@ type GeminiStructuredCompletionOptions struct {
 	ThinkingLevel genai.ThinkingLevel
 }
 
-// The structured completion wrapper function to help route the generation task to corresponsing LLM provider
+// The structured completion wrapper function to help route the generation task to corresponding LLM provider
 func (l *LLMClient) StructuredCompletion(
 	ctx context.Context,
 	opts StructuredCompletionOptions,
@@ -68,8 +72,8 @@ func (l *LLMClient) StructuredCompletion(
 	result interface{}) error {
 	model := opts.Model
 	// Check model type
-	if !(strings.HasPrefix(model, "gpt") || strings.HasPrefix(model, "gemini")) {
-		l.logger.Error("invalid model name", "error", "The model should be starts with either gpt or gemini", "model", model)
+	if !strings.HasPrefix(model, "gpt") && !strings.HasPrefix(model, "gemini") {
+		l.logger.Error("invalid model name", "error", "The model should start with either gpt or gemini", "model", model)
 		return fmt.Errorf("invalid model name, model name should start with either 'gpt' or 'gemini'")
 	}
 	// Avoid empty prompt
@@ -79,7 +83,7 @@ func (l *LLMClient) StructuredCompletion(
 	}
 	schema, err := gptschema.GenerateSchema(schemaInstance)
 	if err != nil {
-		l.logger.Error("failed to generate schema: %w", "error", err)
+		l.logger.Error("failed to generate schema", "error", err)
 		return fmt.Errorf("failed to generate schema: %w", err)
 	}
 	if strings.HasPrefix(model, "gemini") {
@@ -124,11 +128,11 @@ func (l *LLMClient) StructuredCompletionGemini(ctx context.Context, opts GeminiS
 			},
 		},
 	}
-	// Only add thinking level config to the gemini 3 serious models
+	// Only add thinking level config to the gemini 3 series models
 	if strings.HasPrefix(model, "gemini-3") {
 		config.ThinkingConfig = &genai.ThinkingConfig{
 			IncludeThoughts: false,
-			ThinkingLevel:   genai.ThinkingLevelLow,
+			ThinkingLevel:   opts.ThinkingLevel,
 		}
 	}
 	output, err := l.Gemini.Models.GenerateContent(ctx, model, genai.Text(opts.Prompt), config)
@@ -140,7 +144,11 @@ func (l *LLMClient) StructuredCompletionGemini(ctx context.Context, opts GeminiS
 		l.logger.Error("no candidates returned from gemini")
 		return fmt.Errorf("no candidates returned")
 	}
-	jsonContent := output.Text() // one more error handling here
+	jsonContent := output.Text()
+	if jsonContent == "" {
+		l.logger.Error("empty content returned from gemini")
+		return fmt.Errorf("empty content returned from gemini")
+	}
 	if err := json.Unmarshal([]byte(jsonContent), result); err != nil {
 		l.logger.Error("failed to unmarshal response", "error", err, "content", jsonContent)
 		return fmt.Errorf("failed to unmarshal response: %w", err)
