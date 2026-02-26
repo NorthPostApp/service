@@ -384,6 +384,7 @@ func TestAddressService_GenerateNewAddress_Error(t *testing.T) {
 		Prompt:          "generate an address",
 		Model:           "gpt-5-mini",
 		ReasoningEffort: "minimum",
+		ThinkingLevel:   "",
 	}
 	llm.On(
 		"StructuredCompletion",

@@ -9,7 +9,6 @@ import (
 	"north-post/service/internal/repository"
 
 	"github.com/google/uuid"
-	"github.com/openai/openai-go/v3"
 )
 
 const defaultPageSize = 100
@@ -100,8 +99,9 @@ type GenerateAddressInput struct {
 	SystemPrompt    string
 	Prompt          string
 	Language        models.Language
-	Model           openai.ChatModel
-	ReasoningEffort openai.ReasoningEffort
+	Model           string
+	ReasoningEffort string
+	ThinkingLevel   string
 }
 
 type GenerateAddressOutput struct {
@@ -207,13 +207,11 @@ func (s *AddressService) GenerateNewAddress(ctx context.Context, input GenerateA
 	}
 	// configure structured completion options
 	opts := infra.StructuredCompletionOptions{
-		SystemPrompt:    input.SystemPrompt,
 		Prompt:          input.Prompt,
-		SchemaName:      "address_generation",
-		Description:     "Generate a structured address with metadata",
+		SystemPrompt:    input.SystemPrompt,
 		Model:           input.Model,
 		ReasoningEffort: input.ReasoningEffort,
-		// may insert temperature field here in the future
+		ThinkingLevel:   input.ThinkingLevel,
 	}
 	schema := models.BatchAddressGenerationSchema{}
 	var result models.BatchAddressGenerationSchema

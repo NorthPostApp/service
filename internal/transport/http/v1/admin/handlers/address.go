@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/openai/openai-go/v3"
 )
 
 type addressService interface {
@@ -259,7 +258,7 @@ func (h *AddressHandler) GenerateNewAddress(c *gin.Context) {
 		SystemPrompt:    req.SystemPrompt,
 		Prompt:          req.Prompt,
 		Model:           req.Model,
-		ReasoningEffort: openai.ReasoningEffort(req.ReasoningEffort),
+		ReasoningEffort: req.ReasoningEffort,
 	}
 	output, err := h.service.GenerateNewAddress(c.Request.Context(), input)
 	if err != nil {
