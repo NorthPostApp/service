@@ -259,6 +259,7 @@ func (h *AddressHandler) GenerateNewAddress(c *gin.Context) {
 		Prompt:          req.Prompt,
 		Model:           req.Model,
 		ReasoningEffort: req.ReasoningEffort,
+		ThinkingLevel:   req.ThinkingLevel,
 	}
 	output, err := h.service.GenerateNewAddress(c.Request.Context(), input)
 	if err != nil {
