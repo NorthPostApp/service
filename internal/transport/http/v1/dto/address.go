@@ -60,6 +60,7 @@ type GenerateNewAddressRequest struct {
 	SystemPrompt    string          `json:"systemPrompt,omitempty"`
 	Model           string          `json:"model,omitempty"`
 	ReasoningEffort string          `json:"reasoningEffort,omitempty"`
+	ThinkingLevel   string          `json:"thinkingLevel,omitempty"`
 }
 
 type GenerateNewAddressResponse struct {
