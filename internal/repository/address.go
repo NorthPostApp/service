@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"north-post/service/internal/domain/v1/models"
-	"os"
 	"slices"
 	"time"
 
@@ -16,8 +15,7 @@ import (
 
 const (
 	addressTablePrefix  = "addresses"
-	tagsTablePrefix     = "tag"
-	tagDocName          = "all_tags"
+	tagsTablePrefix     = "tags"
 	getByNameLimit      = 10
 	tagsSimilarityLimit = 0.6
 )
@@ -198,8 +196,8 @@ func (r *AddressRepository) UpdateAddress(ctx context.Context, opts UpdateAddres
 
 	addressItem := opts.AddressItem
 	addressItem.CreatedAt = existingAddress.CreatedAt
-	addressItem.UpdatedAt = time.Now().Unix() // update timestamp
-	addressItem.ID = opts.ID                  // avoid this value been modified by admin user
+	addressItem.UpdatedAt = time.Now().UnixMilli() // update timestamp
+	addressItem.ID = opts.ID                       // avoid this value been modified by admin user
 
 	_, err = docRef.Set(ctx, addressItem)
 	if err != nil {
@@ -247,7 +245,7 @@ func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNew
 		}
 	}
 	// Auto generate timestamp
-	now := time.Now().Unix()
+	now := time.Now().UnixMilli()
 	opts.AddressItem.CreatedAt = now
 	opts.AddressItem.UpdatedAt = now
 	// Create document with auto-generated ID
@@ -303,11 +301,11 @@ func (r *AddressRepository) RefreshTags(ctx context.Context, opts RefreshTagsOpt
 		uniqueTagSet[category] = uniqueTags
 	}
 	// save data to "tag" collection
-	tagCollectionName := getTagCollectionName(opts.Language)
-	tagDocRef := r.client.Collection(tagCollectionName).Doc(tagDocName)
+	tagCollectionName := getTagCollectionName()
+	tagDocRef := r.client.Collection(tagCollectionName).Doc(opts.Language.Get())
 	tagsRecord := models.TagsRecord{
 		Tags:        uniqueTagSet,
-		RefreshedAt: time.Now().Unix(),
+		RefreshedAt: time.Now().UnixMilli(),
 	}
 	_, err := tagDocRef.Set(ctx, tagsRecord)
 	if err != nil {
@@ -318,8 +316,8 @@ func (r *AddressRepository) RefreshTags(ctx context.Context, opts RefreshTagsOpt
 }
 
 func (r *AddressRepository) GetAllTags(ctx context.Context, opts GetAllTagsOption) (*models.TagsRecord, error) {
-	collectionName := getTagCollectionName(opts.Language)
-	docRef := r.client.Collection(collectionName).Doc(tagDocName)
+	collectionName := getTagCollectionName()
+	docRef := r.client.Collection(collectionName).Doc(opts.Language.Get())
 	doc, err := docRef.Get(ctx)
 	if err != nil {
 		r.logger.Error("failed to get all tags", "error", err)
@@ -335,11 +333,11 @@ func (r *AddressRepository) GetAllTags(ctx context.Context, opts GetAllTagsOptio
 
 // =========== Helper functions ==========
 func getAddressCollectionName(language models.Language) string {
-	return fmt.Sprintf("%s_%s_%s", os.Getenv("MODE"), addressTablePrefix, language.Get())
+	return fmt.Sprintf("%s_%s", addressTablePrefix, language.Get())
 }
 
-func getTagCollectionName(language models.Language) string {
-	return fmt.Sprintf("%s_%s_%s", os.Getenv("MODE"), tagsTablePrefix, language.Get())
+func getTagCollectionName() string {
+	return tagsTablePrefix
 }
 
 func compareTags(tagsNewItem []string, tagsExistingItem []string) float32 {

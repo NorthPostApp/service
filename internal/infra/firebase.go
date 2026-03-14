@@ -41,7 +41,11 @@ func NewFirebaseClient(logger *slog.Logger) (*FirebaseClient, error) {
 	}
 
 	// initialize firestore client
-	firestoreClient, err := app.Firestore(ctx)
+	databaseID := "(default)"
+	if os.Getenv("MODE") == "dev" {
+		databaseID = "development"
+	}
+	firestoreClient, err := firestore.NewClientWithDatabase(ctx, projectID, databaseID, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("error initializing firestore: %w", err)
 	}
@@ -51,7 +55,7 @@ func NewFirebaseClient(logger *slog.Logger) (*FirebaseClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error initializing auth: %w", err)
 	}
-	logger.Info("firebase initialized successfully")
+	logger.Info("firebase initialized successfully", "Database ID", databaseID)
 
 	return &FirebaseClient{
 		Firestore: firestoreClient,

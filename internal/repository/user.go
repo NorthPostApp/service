@@ -45,7 +45,7 @@ func (u *UserRepository) SignInAdminUserById(ctx context.Context, opts GetUserBy
 		u.logger.Error("failed to parse admin user document", "uid", opts.Uid, "error", err)
 		return nil, fmt.Errorf("failed to parse admin user data: %w", err)
 	}
-	now := time.Now().Unix()
+	now := time.Now().UnixMilli()
 	adminUser.LastLogin = now
 	_, err = docRef.Update(ctx, []firestore.Update{
 		{Path: "lastLogin", Value: now},
