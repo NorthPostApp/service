@@ -108,36 +108,50 @@ func (r *MusicRepository) RefreshMusicList(
 }
 
 func (r *MusicRepository) updateMusicList(ctx context.Context, musicList []models.Music) error {
+	identifierFields := []string{"size", "lastModified"}
+	type identifier struct {
+		Size         float64 `firestore:"size"`
+		LastModified int64   `firestore:"lastModified"`
+	}
+
 	collection := r.firestoreClient.Collection(musicCollectionName)
-	// fetch existing doc IDs only (with only size data as identifier)
-	existingDocs, err := collection.Select("size").Documents(ctx).GetAll()
+	// fetch existing doc IDs only (with only size and lastModifies parts as identifiers)
+	existingDocs, err := collection.Select(identifierFields...).Documents(ctx).GetAll()
 	if err != nil {
 		r.logger.Error("failed to get existing music documents", "error", err)
 		return fmt.Errorf("failed to get existing music documents: %w", err)
 	}
-	existingIDs := make(map[string]struct{ size float64 }, len(existingDocs))
+	existingDocsData := make(map[string]identifier, len(existingDocs))
 	for _, doc := range existingDocs {
-		existingIDs[doc.Ref.ID] = struct{ size float64 }{size: doc.Data()["size"].(float64)}
+		var tempData identifier
+		if err := doc.DataTo(&tempData); err != nil {
+			r.logger.Error(
+				"failed to decode music document",
+				"docID",
+				doc.Ref.ID,
+				"error",
+				err,
+			)
+			continue
+		}
+		existingDocsData[doc.Ref.ID] = tempData
 	}
+
 	newIDs := make(map[string]struct{}, len(musicList))
-	for _, music := range musicList {
-		docId := getDocId(music.Genre, music.Title)
-		newIDs[docId] = struct{}{}
-	}
 	filesAdded, filesUpdated, filesDeleted := 0, 0, 0
 	bulkWriter := r.firestoreClient.BulkWriter(ctx)
 	// add new docs or update existing docs
 	for _, music := range musicList {
 		docId := getDocId(music.Genre, music.Title)
-		if _, exists := existingIDs[docId]; !exists {
+		newIDs[docId] = struct{}{}
+		if _, exists := existingDocsData[docId]; !exists {
 			bulkWriter.Set(collection.Doc(docId), music)
 			filesAdded += 1
-		}
-		if music.Size != existingIDs[docId].size {
+		} else if music.Size != existingDocsData[docId].Size ||
+			music.LastModified != existingDocsData[docId].LastModified {
 			bulkWriter.Set(collection.Doc(docId), music)
 			filesUpdated += 1
 		}
-
 	}
 	// delete non-existing removed docs
 	for _, doc := range existingDocs {
@@ -168,7 +182,7 @@ func getDocId(genre string, title string) string {
 	return fmt.Sprintf("%s_%s", genre, title)
 }
 
-func roundFilesize(size float64, percision uint) float64 {
-	factor := math.Pow(10, float64(percision))
+func roundFilesize(size float64, precision uint) float64 {
+	factor := math.Pow(10, float64(precision))
 	return math.Round(size*factor) / factor
 }
