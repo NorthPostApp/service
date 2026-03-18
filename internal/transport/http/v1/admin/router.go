@@ -10,6 +10,7 @@ type Handlers struct {
 	Address *handlers.AddressHandler
 	Prompt  *handlers.PromptHandler
 	User    *handlers.UserHandler
+	Music   *handlers.MusicHandler
 }
 
 func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.HandlerFunc) {
@@ -32,6 +33,10 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.
 		prompt := admin.Group("/prompt")
 		{
 			prompt.GET("/system/address", h.Prompt.GetSystemAddressGenerationPrompt)
+		}
+		music := admin.Group("/music")
+		{
+			music.GET("/", h.Music.GetMusicList)
 		}
 		signIn := admin.Group("/signin")
 		{

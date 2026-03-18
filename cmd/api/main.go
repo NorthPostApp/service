@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"net/http"
 	"os"
 	"strings"
 
@@ -58,23 +57,42 @@ func main() {
 		}
 	}()
 
+	// Initialize storage bucket client
+	storageBucketClient, err := infra.NewStorageBucketClient(logger)
+	if err != nil {
+		log.Fatalf("failed to initialize storage bucket: %v", err)
+	}
+
 	// Initialize LLM client
 	llmClient, err := infra.NewLLMClient(logger)
 	if err != nil {
 		log.Fatalf("failed to initialize llm client %v", err)
 	}
 
+	// Address service
 	addressRepo := repository.NewAddressRepository(firebaseClient.Firestore, logger)
 	addressService := services.NewAddressService(addressRepo, llmClient)
 	adminAddressHandler := handlers.NewAddressHandler(addressService, logger)
 
+	// Prompt service
 	promptRepo := repository.NewPromptRepository(firebaseClient.Firestore, logger)
 	promptService := services.NewPromptService(promptRepo)
 	promptHandler := handlers.NewPromptHandler(promptService, logger)
 
+	// User data service
 	userRepo := repository.NewUserRepository(firebaseClient.Firestore, logger)
 	userService := services.NewUserService(userRepo)
 	userHandler := handlers.NewUserHandler(userService, logger)
+
+	// Music service
+	musicRepo := repository.NewMusicRepository(
+		storageBucketClient.R2Storage,
+		storageBucketClient.R2Presigned,
+		firebaseClient.Firestore,
+		logger,
+	)
+	musicService := services.NewMusicService(musicRepo)
+	musicHandler := handlers.NewMusicHandler(musicService, logger)
 
 	router := gin.Default()
 	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
@@ -97,14 +115,9 @@ func main() {
 			Address: adminAddressHandler,
 			Prompt:  promptHandler,
 			User:    userHandler,
+			Music:   musicHandler,
 		},
 		adminMiddleware)
-
-	router.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "pong",
-		})
-	})
 
 	port := getPort()
 	logger.Info("starting server", "port", port)

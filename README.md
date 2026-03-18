@@ -11,3 +11,6 @@ docker run -p 8080:8080 north-post-dev
 docker-compose build north-post-admin
 
 docker-compose up north-post-admin
+
+### Some design rules
+1. Do input validation at **service** layer;
