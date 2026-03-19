@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 
 	"north-post/service/internal/domain/v1/models"
 	"north-post/service/internal/repository"
@@ -37,7 +36,7 @@ func (p *PromptService) GetSystemAddressGenerationPrompt(
 	}
 	prompt, err := p.repo.GetSystemAddressGenerationPrompt(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 	return &GetSystemAddressGenerationPromptOutput{Prompt: prompt}, nil
 }

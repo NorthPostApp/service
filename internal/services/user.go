@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"north-post/service/internal/domain/v1/models"
 	"north-post/service/internal/repository"
 )
@@ -33,7 +32,7 @@ func (s *UserService) SignInAdminUserById(
 	opts := repository.GetUserByIdOptions{Uid: input.Uid}
 	adminUserData, err := s.repo.SignInAdminUserById(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 	return &SignInAdminUserByIdOutput{UserData: *adminUserData}, nil
 }
