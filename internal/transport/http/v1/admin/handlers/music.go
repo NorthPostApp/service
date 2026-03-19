@@ -14,6 +14,7 @@ import (
 
 type musicService interface {
 	RefreshMusicList(ctx context.Context) (*services.RefreshMusicListOutput, error)
+	GetAllMusicList(ctx context.Context) (*services.GetAllMusicListOutput, error)
 }
 
 type MusicHandler struct {
@@ -58,5 +59,12 @@ func (h *MusicHandler) GetMusicList(c *gin.Context) {
 		c.JSON(http.StatusOK, response)
 		return
 	}
-	c.JSON(http.StatusOK, "placeholder")
+	output, err := h.service.GetAllMusicList(c.Request.Context())
+	if err != nil {
+		h.logger.Error("failed to get all music list", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	response := dto.GetMusicListResponse{Data: dto.ToMusicDTOs(output.Data)}
+	c.JSON(http.StatusOK, response)
 }

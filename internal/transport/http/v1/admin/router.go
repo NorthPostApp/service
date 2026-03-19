@@ -36,7 +36,7 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.
 		}
 		music := admin.Group("/music")
 		{
-			music.GET("/", h.Music.GetMusicList)
+			music.GET("", h.Music.GetMusicList)
 		}
 		signIn := admin.Group("/signin")
 		{

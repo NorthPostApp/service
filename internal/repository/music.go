@@ -12,6 +12,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"google.golang.org/api/iterator"
 )
 
 const (
@@ -52,6 +53,10 @@ type RefreshMusicListResponse struct {
 	Data []models.Music
 }
 
+type GetAllMusicListResponse struct {
+	Data []models.Music
+}
+
 // Get the presigned music url with the expiration of 15 minutes
 func (r *MusicRepository) GetPresignedMusicURL(
 	ctx context.Context,
@@ -65,6 +70,40 @@ func (r *MusicRepository) GetPresignedMusicURL(
 		return nil, fmt.Errorf("failed to get music url: %w", err)
 	}
 	return &GetPresignedMusicURLResponse{URL: request.URL}, nil
+}
+
+// Currently we don't implement pagination because the list is still small
+// but in the future, if the music list have over 100 songs, pagination is required
+func (r *MusicRepository) GetAllMusicList(
+	ctx context.Context) (*GetAllMusicListResponse, error) {
+	iter := r.firestoreClient.Collection(musicCollectionName).Documents(ctx)
+	defer iter.Stop()
+	var musicList []models.Music
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			r.logger.Error(
+				"failed to iterate music documents",
+				"error", err,
+				"docID", doc.Ref.ID,
+			)
+			return nil, fmt.Errorf("failed to iterate music documents: %w", err)
+		}
+		var music models.Music
+		if err := doc.DataTo(&music); err != nil {
+			r.logger.Error(
+				"failed to parse music document",
+				"error", err,
+				"docID", doc.Ref.ID,
+			)
+			continue
+		}
+		musicList = append(musicList, music)
+	}
+	return &GetAllMusicListResponse{Data: musicList}, nil
 }
 
 // Refresh he music list and store it in the database

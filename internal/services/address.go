@@ -158,7 +158,7 @@ func (s *AddressService) GetAddressById(ctx context.Context, input GetAddressByI
 	}
 	address, err := s.repo.GetAddressById(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 	return &GetAddressByIdOutput{Address: *address}, nil
 }
@@ -170,7 +170,7 @@ func (s *AddressService) CreateNewAddress(ctx context.Context, input CreateNewAd
 	}
 	id, err := s.repo.CreateNewAddress(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 	return &CreateNewAddressOutput{ID: id}, nil
 }
@@ -183,7 +183,7 @@ func (s *AddressService) UpdateAddress(ctx context.Context, input UpdateAddressI
 	}
 	addressItem, err := s.repo.UpdateAddress(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 	return &UpdateAddressOutput{Address: *addressItem}, nil
 }
@@ -195,7 +195,7 @@ func (s *AddressService) DeleteAddress(ctx context.Context, input DeleteAddressI
 	}
 	deletedId, err := s.repo.DeleteAddress(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 	return &DeleteAddressOutput{ID: deletedId}, nil
 }
@@ -240,7 +240,7 @@ func (s *AddressService) RefreshTags(
 	opts := repository.RefreshTagsOption{Language: input.Language}
 	record, err := s.repo.RefreshTags(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 	return &RefreshTagsOutput{TagsRecord: *record}, nil
 }
@@ -252,7 +252,7 @@ func (s *AddressService) GetAllTags(
 	opts := repository.GetAllTagsOption{Language: input.Language}
 	record, err := s.repo.GetAllTags(ctx, opts)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, err
 	}
 	return &GetAllTagsOutput{TagsRecord: *record}, nil
 }
