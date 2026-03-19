@@ -85,12 +85,20 @@ func (r *MusicRepository) GetAllMusicList(
 			break
 		}
 		if err != nil {
-			r.logger.Error("failed to iterate music documents", "error", err)
+			r.logger.Error(
+				"failed to iterate music documents",
+				"error", err,
+				"docID", doc.Ref.ID,
+			)
 			return nil, fmt.Errorf("failed to iterate music documents: %w", err)
 		}
 		var music models.Music
 		if err := doc.DataTo(&music); err != nil {
-			r.logger.Error("failed to parse music document", "error", err)
+			r.logger.Error(
+				"failed to parse music document",
+				"error", err,
+				"docID", doc.Ref.ID,
+			)
 			continue
 		}
 		musicList = append(musicList, music)
