@@ -49,6 +49,7 @@ func main() {
 	// Initialize Firebase client
 	firebaseClient, err := infra.NewFirebaseClient(logger)
 	if err != nil {
+		logger.Error("failed to initialize firebase", "error", err)
 		log.Fatalf("failed to initialize firebase: %v", err)
 	}
 	defer func() {
@@ -60,12 +61,14 @@ func main() {
 	// Initialize storage bucket client
 	storageBucketClient, err := infra.NewStorageBucketClient(logger)
 	if err != nil {
+		logger.Error("failed to initialize storage bucker", "error", err)
 		log.Fatalf("failed to initialize storage bucket: %v", err)
 	}
 
 	// Initialize LLM client
 	llmClient, err := infra.NewLLMClient(logger)
 	if err != nil {
+		logger.Error("failed to initialize llm client", "error", err)
 		log.Fatalf("failed to initialize llm client %v", err)
 	}
 
