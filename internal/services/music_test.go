@@ -33,7 +33,7 @@ func (m *mockMusicRepository) GetAllMusicList(ctx context.Context) (*repository.
 
 func (m *mockMusicRepository) GetPresignedMusicURL(ctx context.Context, opts repository.GetPresignedMusicURLOptions) (
 	*repository.GetPresignedMusicURLResponse, error) {
-	args := m.Called(ctx)
+	args := m.Called(ctx, opts)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

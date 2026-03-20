@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"north-post/service/internal/services"
 	"north-post/service/internal/transport/http/v1/dto"
+	"north-post/service/internal/transport/http/v1/utils"
 	"strconv"
 	"strings"
 
@@ -89,9 +90,8 @@ func (h *MusicHandler) GetMusicList(c *gin.Context) {
 func (h *MusicHandler) GetPresignedMusicURL(c *gin.Context) {
 	genre := strings.TrimSpace(c.Param("genre"))
 	track := strings.TrimSpace(c.Param("track"))
-	if len(track) == 0 || len(genre) == 0 {
-		h.logger.Error("invalid music filename", "track", track, "genre", genre)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid music genre or track"})
+	validParams := utils.ValidateMusicFilename(c, genre, track, h.logger)
+	if !validParams {
 		return
 	}
 	input := services.GetPresignedMusicURLInput{

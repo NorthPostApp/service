@@ -125,3 +125,29 @@ func TestValidateLanguage(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateMusicFilename(t *testing.T) {
+	tests := []struct {
+		name           string
+		genre          string
+		track          string
+		expectedResult bool
+	}{
+		{"valid inputs", "pop", "song.mp3", true},
+		{"empty genre", "", "song.mp3", false},
+		{"empty track", "pop", "", false},
+		{"path traversal in genre", "../../etc", "passwd", false},
+		{"path traversal in track", "pop", "../secret.mp3", false},
+		{"slash in track", "pop", "sub/song.mp3", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request = httptest.NewRequest(http.MethodGet, "/test", nil)
+			logger := slog.New(slog.NewTextHandler(bytes.NewBuffer(nil), nil))
+			result := ValidateMusicFilename(c, tt.genre, tt.track, logger)
+			assert.Equal(t, tt.expectedResult, result)
+		})
+	}
+}

@@ -57,7 +57,7 @@ func setupMusicRouter() (*mockMusicService, *gin.Engine) {
 	handler := NewMusicHandler(mockSrv, slog.Default())
 	router := gin.Default()
 	router.GET("/admin/music", handler.GetMusicList)
-	router.GET("admin/music/:genre/:track", handler.GetPresignedMusicURL)
+	router.GET("/admin/music/:genre/:track", handler.GetPresignedMusicURL)
 	return mockSrv, router
 }
 
@@ -118,7 +118,7 @@ func TestMusicHandler_GetMusicList(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, w.Code)
 			if tt.mockOutput == nil && tt.mockError == nil {
 				mockSrv.AssertNotCalled(t, "GetAllMusicList")
-			} else if tt.mockError == nil {
+			} else if tt.mockError != nil {
 				mockSrv.AssertExpectations(t)
 			}
 		})
@@ -161,7 +161,7 @@ func TestMusicHandler_GetMusicList_Refresh(t *testing.T) {
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 			assert.Equal(t, tt.expectedStatus, w.Code)
-			if tt.mockError == nil {
+			if tt.mockError != nil {
 				mockSrv.AssertExpectations(t)
 			}
 		})
@@ -192,8 +192,15 @@ func TestMusicHandler_GetPresignedMusicURL(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
-			name:           "invalid request with empty genre",
+			name:           "invalid request with empty track name",
 			url:            "/admin/music/a/ ",
+			mockOutput:     nil,
+			mockError:      errors.New("failed"),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "invalid request with possible sourcing name",
+			url:            "/admin/music/../a",
 			mockOutput:     nil,
 			mockError:      errors.New("failed"),
 			expectedStatus: http.StatusBadRequest,
@@ -216,7 +223,7 @@ func TestMusicHandler_GetPresignedMusicURL(t *testing.T) {
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 			assert.Equal(t, tt.expectedStatus, w.Code)
-			if tt.mockError == nil {
+			if tt.mockError != nil && tt.expectedStatus != http.StatusBadRequest {
 				mockSrc.AssertExpectations(t)
 			}
 		})
