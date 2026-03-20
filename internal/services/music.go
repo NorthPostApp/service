@@ -29,6 +29,13 @@ type GetAllMusicListOutput struct {
 	Data []models.Music
 }
 
+type GetPresignedMusicURLInput struct {
+	Filename string
+}
+type GetPresignedMusicURLOutput struct {
+	URL string
+}
+
 func (s *MusicService) RefreshMusicList(
 	ctx context.Context) (*RefreshMusicListOutput, error) {
 	musicList, err := s.repo.RefreshMusicList(ctx)
@@ -45,4 +52,18 @@ func (s *MusicService) GetAllMusicList(
 		return nil, err
 	}
 	return &GetAllMusicListOutput{Data: musicList.Data}, nil
+}
+
+func (s *MusicService) GetPresignedMusicURL(
+	ctx context.Context,
+	input GetPresignedMusicURLInput,
+) (*GetPresignedMusicURLOutput, error) {
+	opts := repository.GetPresignedMusicURLOptions{
+		Filename: input.Filename,
+	}
+	output, err := s.repo.GetPresignedMusicURL(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return &GetPresignedMusicURLOutput{URL: output.URL}, nil
 }

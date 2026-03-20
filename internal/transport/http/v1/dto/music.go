@@ -15,6 +15,10 @@ type GetMusicListResponse struct {
 	Data []MusicDTO `json:"data"`
 }
 
+type GetPresignedMusicURLResponse struct {
+	Data string `json:"data"`
+}
+
 func ToMusicDTO(music models.Music) MusicDTO {
 	return MusicDTO{
 		Filename:     music.Filename,

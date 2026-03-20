@@ -113,3 +113,36 @@ func TestMusicService_GetAllMusicList_Error(t *testing.T) {
 	assert.Nil(t, output)
 	assert.Error(t, err)
 }
+
+func TestMusicService_GetPresignedMusicURL(t *testing.T) {
+	t.Parallel()
+	services, repo := setupMusicService()
+	ctx := context.Background()
+	input := GetPresignedMusicURLInput{Filename: "foo/bar"}
+	expectedOutput := &repository.GetPresignedMusicURLResponse{URL: "foo/bar"}
+	repo.On(
+		"GetPresignedMusicURL",
+		mock.Anything,
+		mock.Anything,
+	).Return(expectedOutput, nil)
+	output, err := services.GetPresignedMusicURL(ctx, input)
+	repo.AssertExpectations(t)
+	assert.Nil(t, err)
+	assert.Equal(t, expectedOutput.URL, output.URL)
+}
+
+func TestMusicService_GetPresignedMusicURL_ERROR(t *testing.T) {
+	t.Parallel()
+	services, repo := setupMusicService()
+	ctx := context.Background()
+	input := GetPresignedMusicURLInput{Filename: "foo/bar"}
+	repo.On(
+		"GetPresignedMusicURL",
+		mock.Anything,
+		mock.Anything,
+	).Return(nil, errors.New("failed"))
+	output, err := services.GetPresignedMusicURL(ctx, input)
+	repo.AssertExpectations(t)
+	assert.NotNil(t, err)
+	assert.Nil(t, output)
+}
