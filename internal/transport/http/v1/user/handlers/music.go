@@ -35,7 +35,7 @@ func NewMusicHandler(service musicService, logger *slog.Logger) *MusicHandler {
 
 // GetMusicList godoc
 // @Summary Get music list
-// @Description Get the list of music tracks. Pass refresh=true to force a refresh from the upstream source.
+// @Description Get the list of music tracks.
 // @Tags User Music
 // @Accept json
 // @Produce json
