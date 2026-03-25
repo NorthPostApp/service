@@ -34,8 +34,8 @@ github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapp
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.53.0/go.mod h1:cSgYe11MCNYunTnRXrKiR/tHc0eoKjICUuWpNZoVCOo=
 github.com/MicahParks/keyfunc v1.9.0 h1:lhKd5xrFHLNOWrDc4Tyb/Q1AJ4LCzQ48GVJyVIID3+o=
 github.com/MicahParks/keyfunc v1.9.0/go.mod h1:IdnCilugA0O/99dW+/MkvlyrsX8+L8+x95xuVNtM5jw=
-github.com/akane9506/gptschema v1.0.0 h1:oYTsQqnS+aafxkVNg5n2XH6DWkaxqxDqqfu5zAoPHEk=
-github.com/akane9506/gptschema v1.0.0/go.mod h1:dpXY+p/Obp3T300VCNbZJHspHWY3Tp0TvZ6bEf52tPc=
+github.com/akane9506/llmschema v1.1.0-beta.2 h1:d5Q2Ungs+WQudVnD6Xwg5GQyCK1gIoCxmEYzesnF4n0=
+github.com/akane9506/llmschema v1.1.0-beta.2/go.mod h1:1P9ClCRhYYirQlmDskAFcCjhiT9WCLTCWVwJT9zIKK0=
 github.com/aws/aws-sdk-go-v2 v1.41.4 h1:10f50G7WyU02T56ox1wWXq+zTX9I1zxG46HYuG1hH/k=
 github.com/aws/aws-sdk-go-v2 v1.41.4/go.mod h1:mwsPRE8ceUUpiTgF7QmQIJ7lgsKUPQOUl3o72QBrE1o=
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.7 h1:3kGOqnh1pPeddVa/E37XNTaWJ8W6vrbYV9lJEkCnhuY=

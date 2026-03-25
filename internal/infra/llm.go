@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/akane9506/gptschema"
+	"github.com/akane9506/llmschema"
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
 	"google.golang.org/genai"
@@ -81,7 +81,7 @@ func (l *LLMClient) StructuredCompletion(
 		l.logger.Error("invalid prompt", "error", "the prompt shouldn't be empty")
 		return fmt.Errorf("invalid prompt, the prompt shouldn't be an empty string")
 	}
-	schema, err := gptschema.GenerateSchema(schemaInstance)
+	schema, err := llmschema.GenerateSchema(schemaInstance)
 	if err != nil {
 		l.logger.Error("failed to generate schema", "error", err)
 		return fmt.Errorf("failed to generate schema: %w", err)

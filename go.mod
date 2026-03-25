@@ -5,7 +5,7 @@ go 1.24.3
 require (
 	cloud.google.com/go/firestore v1.20.0
 	firebase.google.com/go/v4 v4.18.0
-	github.com/akane9506/gptschema v1.0.0
+	github.com/akane9506/llmschema v1.1.0-beta.2
 	github.com/aws/aws-sdk-go-v2 v1.41.4
 	github.com/aws/aws-sdk-go-v2/config v1.32.12
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.12
