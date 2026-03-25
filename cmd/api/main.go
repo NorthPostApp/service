@@ -11,8 +11,10 @@ import (
 	"north-post/service/internal/repository"
 	"north-post/service/internal/services"
 	"north-post/service/internal/transport/http/v1/admin"
-	"north-post/service/internal/transport/http/v1/admin/handlers"
+	adminHandlers "north-post/service/internal/transport/http/v1/admin/handlers"
 	"north-post/service/internal/transport/http/v1/middleware"
+	"north-post/service/internal/transport/http/v1/user"
+	userHandlers "north-post/service/internal/transport/http/v1/user/handlers"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -75,17 +77,17 @@ func main() {
 	// Address service
 	addressRepo := repository.NewAddressRepository(firebaseClient.Firestore, logger)
 	addressService := services.NewAddressService(addressRepo, llmClient)
-	adminAddressHandler := handlers.NewAddressHandler(addressService, logger)
+	adminAddressHandler := adminHandlers.NewAddressHandler(addressService, logger)
 
 	// Prompt service
 	promptRepo := repository.NewPromptRepository(firebaseClient.Firestore, logger)
 	promptService := services.NewPromptService(promptRepo)
-	promptHandler := handlers.NewPromptHandler(promptService, logger)
+	promptHandler := adminHandlers.NewPromptHandler(promptService, logger)
 
 	// User data service
 	userRepo := repository.NewUserRepository(firebaseClient.Firestore, logger)
 	userService := services.NewUserService(userRepo)
-	userHandler := handlers.NewUserHandler(userService, logger)
+	adminUserDataHandler := adminHandlers.NewUserHandler(userService, logger)
 
 	// Music service
 	musicRepo := repository.NewMusicRepository(
@@ -95,8 +97,10 @@ func main() {
 		logger,
 	)
 	musicService := services.NewMusicService(musicRepo)
-	musicHandler := handlers.NewMusicHandler(musicService, logger)
+	adminMusicHandler := adminHandlers.NewMusicHandler(musicService, logger)
+	userMusicHandler := userHandlers.NewMusicHandler(musicService, logger)
 
+	// Setup routers
 	router := gin.Default()
 	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
 	origins := []string{}
@@ -117,10 +121,14 @@ func main() {
 		&admin.Handlers{
 			Address: adminAddressHandler,
 			Prompt:  promptHandler,
-			User:    userHandler,
-			Music:   musicHandler,
+			User:    adminUserDataHandler,
+			Music:   adminMusicHandler,
 		},
 		adminMiddleware)
+
+	user.SetupUserRouter(router_v1, &user.Handlers{
+		Music: userMusicHandler,
+	})
 
 	port := getPort()
 	logger.Info("starting server", "port", port)
