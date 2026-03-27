@@ -88,7 +88,6 @@ func (r *MusicRepository) GetAllMusicList(
 			r.logger.Error(
 				"failed to iterate music documents",
 				"error", err,
-				"docID", doc.Ref.ID,
 			)
 			return nil, fmt.Errorf("failed to iterate music documents: %w", err)
 		}
@@ -97,7 +96,6 @@ func (r *MusicRepository) GetAllMusicList(
 			r.logger.Error(
 				"failed to parse music document",
 				"error", err,
-				"docID", doc.Ref.ID,
 			)
 			continue
 		}
