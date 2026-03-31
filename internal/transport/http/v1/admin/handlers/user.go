@@ -31,7 +31,7 @@ func NewUserHandler(service userService, logger *slog.Logger) *UserHandler {
 // @Summary Sign in admin user
 // @Description Sign in an admin user with the idToken and update last login timestamp
 // @Tags Admin User
-// @Accept json
+// @Param Authorization header string true "Bearer idToken"
 // @Produce json
 // @Success 200 {object} dto.SignInAdminUserResponse
 // @Failure 401 {object} map[string]string
@@ -40,7 +40,11 @@ func NewUserHandler(service userService, logger *slog.Logger) *UserHandler {
 func (h *UserHandler) SignInAdminUser(c *gin.Context) {
 	uid := c.GetString(middleware.UidKey) // from the middleware
 	if uid == "" {
-		h.logger.Error("missing user id from the middleware context")
+		h.logger.Error(
+			"missing user id from the middleware context",
+			"path", c.Request.URL.Path,
+			"client_ip", c.ClientIP(),
+		)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized id token"})
 		return
 	}
