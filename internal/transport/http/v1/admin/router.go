@@ -41,7 +41,7 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.
 		}
 		signIn := admin.Group("/signin")
 		{
-			signIn.POST("", h.User.SignInAdminUserById)
+			signIn.POST("", h.User.SignInAdminUser)
 		}
 	}
 }
