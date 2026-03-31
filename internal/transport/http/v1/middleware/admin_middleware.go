@@ -11,6 +11,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	UidKey = "user_id"
+)
+
 type authClient interface {
 	VerifyIDToken(c context.Context, idToken string) (*auth.Token, error)
 }
@@ -53,7 +57,7 @@ func AdminAuthMiddleware(auth authClient, logger *slog.Logger) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		c.Set("user_id", authToken.UID)
+		c.Set(UidKey, authToken.UID)
 		c.Next()
 	}
 }

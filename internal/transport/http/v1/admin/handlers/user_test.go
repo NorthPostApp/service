@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,7 +9,7 @@ import (
 	"net/http/httptest"
 	"north-post/service/internal/domain/v1/models"
 	"north-post/service/internal/services"
-	"north-post/service/internal/transport/http/v1/dto"
+	"north-post/service/internal/transport/http/v1/middleware"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -28,22 +27,24 @@ func (m *MockUserService) SignInAdminUserById(ctx context.Context, input service
 	return args.Get(0).(*services.SignInAdminUserByIdOutput), args.Error(1)
 }
 
-func setupUserRouter(handler *UserHandler) *gin.Engine {
+func setupUserRouter(handler *UserHandler, uid string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
-	r.POST("/admin/signin", handler.SignInAdminUserById)
+	r.POST("/admin/signin", func(c *gin.Context) {
+		if uid != "" {
+			c.Set(middleware.UidKey, uid)
+		}
+		c.Next()
+	}, handler.SignInAdminUser)
 	return r
 }
 
-func TestSignInAdminUserById(t *testing.T) {
+func TestSignInAdminUser(t *testing.T) {
 	t.Parallel()
-	mockSvc := new(MockUserService)
-	handler := NewUserHandler(mockSvc, slog.Default())
-	router := setupUserRouter(handler)
+
 	tests := []struct {
 		name           string
-		body           dto.SignInAdminUserByIdRequest
-		rawBody        []byte
+		uid            string // set to context
 		mockOutput     *services.SignInAdminUserByIdOutput
 		mockError      error
 		expectedStatus int
@@ -51,9 +52,7 @@ func TestSignInAdminUserById(t *testing.T) {
 	}{
 		{
 			name: "success",
-			body: dto.SignInAdminUserByIdRequest{
-				Uid: "uid-1",
-			},
+			uid:  "user-123",
 			mockOutput: &services.SignInAdminUserByIdOutput{
 				UserData: models.AdminUser{
 					Email:       "test@example.com",
@@ -67,51 +66,43 @@ func TestSignInAdminUserById(t *testing.T) {
 			expectCall:     true,
 		},
 		{
-			name: "service error",
-			body: dto.SignInAdminUserByIdRequest{
-				Uid: "uid-1",
-			},
+			name:           "service error",
+			uid:            "user-123",
 			mockOutput:     (*services.SignInAdminUserByIdOutput)(nil),
 			mockError:      errors.New("service failed"),
 			expectedStatus: http.StatusInternalServerError,
 			expectCall:     true,
 		},
 		{
-			name:           "invalid json",
-			rawBody:        []byte("invalid"),
-			mockOutput:     nil,
-			mockError:      nil,
-			expectedStatus: http.StatusBadRequest,
-			expectCall:     false,
-		},
-		{
 			name:           "missing uid",
-			body:           dto.SignInAdminUserByIdRequest{},
+			uid:            "",
 			mockOutput:     nil,
 			mockError:      nil,
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusUnauthorized,
 			expectCall:     false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			mockSvc := new(MockUserService)
+			handler := NewUserHandler(mockSvc, slog.Default())
+			router := setupUserRouter(handler, tt.uid)
 			if tt.expectCall {
-				input := services.SignInAdminUserByIdInput{Uid: tt.body.Uid}
+				input := services.SignInAdminUserByIdInput{Uid: tt.uid}
 				mockSvc.On("SignInAdminUserById", mock.Anything, input).
 					Return(tt.mockOutput, tt.mockError).Once()
 			}
-			body := tt.rawBody
-			if body == nil {
-				body, _ = json.Marshal(tt.body)
-			}
-			req, _ := http.NewRequest("POST", "/admin/signin", bytes.NewBuffer(body))
-			req.Header.Set("Content-Type", "application/json")
+			req, _ := http.NewRequest("POST", "/admin/signin", nil)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 			assert.Equal(t, tt.expectedStatus, w.Code)
-			if tt.expectCall {
-				mockSvc.AssertExpectations(t)
+			if tt.expectedStatus == http.StatusOK {
+				var resp map[string]json.RawMessage
+				err := json.Unmarshal(w.Body.Bytes(), &resp)
+				assert.NoError(t, err)
+				assert.Contains(t, resp, "data")
 			}
+			mockSvc.AssertExpectations(t)
 		})
 	}
 }

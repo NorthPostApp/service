@@ -2,11 +2,7 @@ package dto
 
 import "north-post/service/internal/domain/v1/models"
 
-type SignInAdminUserByIdRequest struct {
-	Uid string `json:"uid" binding:"required"`
-}
-
-type SignInAdminUserByIdResponse struct {
+type SignInAdminUserResponse struct {
 	Data AdminUserDTO `json:"data"`
 }
 

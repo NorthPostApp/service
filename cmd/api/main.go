@@ -85,7 +85,7 @@ func main() {
 	promptHandler := adminHandlers.NewPromptHandler(promptService, logger)
 
 	// User data service
-	userRepo := repository.NewUserRepository(firebaseClient.Firestore, logger)
+	userRepo := repository.NewUserRepository(firebaseClient, logger)
 	userService := services.NewUserService(userRepo)
 	adminUserDataHandler := adminHandlers.NewUserHandler(userService, logger)
 
