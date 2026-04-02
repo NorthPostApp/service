@@ -25,6 +25,16 @@ func (m *mockUserRepository) SignInAdminUserById(
 	return args.Get(0).(*models.AdminUser), args.Error(1)
 }
 
+func (m *mockUserRepository) AuthenticateAppUserById(
+	ctx context.Context,
+	opts repository.GetUserByIdOptions) (*models.AppUser, error) {
+	args := m.Called(ctx, opts)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.AppUser), nil
+}
+
 func setupUserService() (*UserService, *mockUserRepository) {
 	repo := new(mockUserRepository)
 	service := NewUserService(repo)
@@ -72,6 +82,52 @@ func TestUserService_SignInAdminUserById_Error(t *testing.T) {
 		mock.Anything,
 	).Return(nil, errors.New("user not found")).Once()
 	output, err := service.SignInAdminUserById(ctx, input)
+	repo.AssertExpectations(t)
+	assert.Error(t, err)
+	assert.Nil(t, output)
+}
+
+func TestUserService_AuthenticateAppUserById(t *testing.T) {
+	t.Parallel()
+	service, repo := setupUserService()
+	ctx := context.Background()
+	input := AuthenticateAppUserByIdInput{Uid: "test-uid-123"}
+	expectedUser := &models.AppUser{
+		Email:       "user@example.com",
+		DisplayName: "App User",
+		CreatedAt:   1234567890,
+		LastLogin:   1234567890,
+		ImageUrl:    "https://example.com/image.jpg",
+		LikedMusics: []string{},
+		Drafts:      []string{},
+	}
+	repo.On(
+		"AuthenticateAppUserById",
+		mock.Anything,
+		mock.Anything,
+	).Return(expectedUser, nil).Once()
+	output, err := service.AuthenticateAppUserById(ctx, input)
+	repo.AssertExpectations(t)
+	assert.Nil(t, err)
+	assert.Equal(t, expectedUser.Email, output.UserData.Email)
+	assert.Equal(t, expectedUser.DisplayName, output.UserData.DisplayName)
+	assert.Equal(t, expectedUser.LastLogin, output.UserData.LastLogin)
+	assert.Equal(t, expectedUser.ImageUrl, output.UserData.ImageUrl)
+}
+
+func TestUserService_AuthenticateAppUserById_Error(t *testing.T) {
+	t.Parallel()
+	service, repo := setupUserService()
+	ctx := context.Background()
+	input := AuthenticateAppUserByIdInput{
+		Uid: "test-uid-123",
+	}
+	repo.On(
+		"AuthenticateAppUserById",
+		mock.Anything,
+		mock.Anything,
+	).Return(nil, errors.New("user not found")).Once()
+	output, err := service.AuthenticateAppUserById(ctx, input)
 	repo.AssertExpectations(t)
 	assert.Error(t, err)
 	assert.Nil(t, output)

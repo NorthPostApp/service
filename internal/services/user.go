@@ -8,6 +8,7 @@ import (
 
 type userRepository interface {
 	SignInAdminUserById(ctx context.Context, opts repository.GetUserByIdOptions) (*models.AdminUser, error)
+	AuthenticateAppUserById(ctx context.Context, opts repository.GetUserByIdOptions) (*models.AppUser, error)
 }
 
 type UserService struct {
@@ -20,6 +21,14 @@ type SignInAdminUserByIdInput struct {
 
 type SignInAdminUserByIdOutput struct {
 	UserData models.AdminUser
+}
+
+type AuthenticateAppUserByIdInput struct {
+	Uid string
+}
+
+type AuthenticateAppUserByIdOutput struct {
+	UserData models.AppUser
 }
 
 func NewUserService(repo userRepository) *UserService {
@@ -35,4 +44,15 @@ func (s *UserService) SignInAdminUserById(
 		return nil, err
 	}
 	return &SignInAdminUserByIdOutput{UserData: *adminUserData}, nil
+}
+
+func (s *UserService) AuthenticateAppUserById(
+	ctx context.Context,
+	input AuthenticateAppUserByIdInput) (*AuthenticateAppUserByIdOutput, error) {
+	opts := repository.GetUserByIdOptions{Uid: input.Uid}
+	appUserData, err := s.repo.AuthenticateAppUserById(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return &AuthenticateAppUserByIdOutput{UserData: *appUserData}, nil
 }

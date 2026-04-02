@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"firebase.google.com/go/v4/auth"
 	"github.com/gin-gonic/gin"
+
+	"firebase.google.com/go/v4/auth"
 )
 
 const (
@@ -19,7 +20,7 @@ type authClient interface {
 	VerifyIDToken(c context.Context, idToken string) (*auth.Token, error)
 }
 
-func AdminAuthMiddleware(auth authClient, logger *slog.Logger) gin.HandlerFunc {
+func AuthMiddleware(auth authClient, logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		clientIP := c.ClientIP()
@@ -48,6 +49,7 @@ func AdminAuthMiddleware(auth authClient, logger *slog.Logger) gin.HandlerFunc {
 
 		// verify the firebase id token
 		idToken := headerParts[1]
+		fmt.Println(idToken)
 		authToken, err := auth.VerifyIDToken(c, idToken)
 		if err != nil {
 			logger.Error("Failed to verify ID token", "error", err, "clientIP", clientIP)

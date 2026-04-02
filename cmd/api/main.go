@@ -88,6 +88,7 @@ func main() {
 	userRepo := repository.NewUserRepository(firebaseClient, logger)
 	userService := services.NewUserService(userRepo)
 	adminUserDataHandler := adminHandlers.NewUserHandler(userService, logger)
+	appUserDataHandler := userHandlers.NewUserHandler(userService, logger)
 
 	// Music service
 	musicRepo := repository.NewMusicRepository(
@@ -116,7 +117,7 @@ func main() {
 	}))
 	router_v1 := router.Group("/v1")
 
-	adminMiddleware := middleware.AdminAuthMiddleware(firebaseClient.Auth, logger)
+	authMiddleware := middleware.AuthMiddleware(firebaseClient.Auth, logger)
 	admin.SetupAdminRouter(router_v1,
 		&admin.Handlers{
 			Address: adminAddressHandler,
@@ -124,11 +125,13 @@ func main() {
 			User:    adminUserDataHandler,
 			Music:   adminMusicHandler,
 		},
-		adminMiddleware)
+		authMiddleware)
 
 	user.SetupUserRouter(router_v1, &user.Handlers{
 		Music: userMusicHandler,
-	})
+		User:  appUserDataHandler,
+	},
+		authMiddleware)
 
 	port := getPort()
 	logger.Info("starting server", "port", port)

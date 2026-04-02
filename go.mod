@@ -18,6 +18,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/api v0.256.0
 	google.golang.org/genai v1.48.0
+	google.golang.org/grpc v1.79.3
 )
 
 require (
@@ -117,7 +118,6 @@ require (
 	google.golang.org/genproto v0.0.0-20250603155806-513f23925822 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
-	google.golang.org/grpc v1.79.3 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -48,7 +48,7 @@ func setupTestContext(authHeader string, mockAuth *MockAuthClient) (
 	var logBuffer bytes.Buffer
 	logger := slog.New(slog.NewTextHandler(&logBuffer, nil))
 	// var authClient *auth.Client
-	middleware := AdminAuthMiddleware(mockAuth, logger)
+	middleware := AuthMiddleware(mockAuth, logger)
 	return c, w, &logBuffer, middleware
 }
 
