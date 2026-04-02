@@ -55,7 +55,7 @@ func (h *UserHandler) AuthenticateAppUser(c *gin.Context) {
 	output, err := h.service.AuthenticateAppUserById(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to authenticate app user", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to authenticate app user"})
 	}
 	response := dto.AuthenticateAppUserResponse{
 		Data: dto.ToAppUserDTO(output.UserData),
