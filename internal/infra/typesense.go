@@ -6,27 +6,43 @@ import (
 	"os"
 
 	"github.com/typesense/typesense-go/v4/typesense"
-)
-
-const (
-	typesensePort = "8108"
+	"github.com/typesense/typesense-go/v4/typesense/api"
 )
 
 type TypesenseClient struct {
-	TypeSense *typesense.Client
+	Client *typesense.Client
 }
 
 func NewTypesenseClient(logger *slog.Logger) (*TypesenseClient, error) {
-	host := os.Getenv("TYPESENSE_HOST")
-	port := typesensePort
+	typesenseURL := os.Getenv("TYPESENSE_URL")
 	apiKey := os.Getenv("TYPESENSE_API_KEY")
-	if host == "" || apiKey == "" {
-		return nil, fmt.Errorf("TYPESENSE_HOST and TYPESENSE_API_KEY are required")
+	if typesenseURL == "" || apiKey == "" {
+		return nil, fmt.Errorf("TYPESENSE_URL and TYPESENSE_API_KEY are required")
 	}
 	client := typesense.NewClient(
-		typesense.WithServer(fmt.Sprintf("%s:%s", host, port)),
+		typesense.WithServer(typesenseURL),
 		typesense.WithAPIKey(apiKey),
 	)
 	logger.Info("Typesense client initialized successfully")
-	return &TypesenseClient{TypeSense: client}, nil
+	return &TypesenseClient{Client: client}, nil
+}
+
+// The typesense collection schema should be the same as this struct
+type TypesenseAddressRecord struct {
+	ID         string   `json:"id"`
+	Name       string   `json:"name"`
+	BriefIntro string   `json:"briefIntro"`
+	Tags       []string `json:"tags"`
+}
+
+func GetTypesenseAddressCollectionSchema(name string) *api.CollectionSchema {
+	return &api.CollectionSchema{
+		Name: name,
+		Fields: []api.Field{
+			{Name: "id", Type: "string"},
+			{Name: "name", Type: "string"},
+			{Name: "briefIntro", Type: "string"},
+			{Name: "tags", Type: "string[]"},
+		},
+	}
 }

@@ -84,7 +84,7 @@ func main() {
 	// Address service
 	addressRepo := repository.NewAddressRepository(
 		firebaseClient.Firestore,
-		typesenseClient.TypeSense,
+		typesenseClient.Client,
 		logger)
 	addressService := services.NewAddressService(addressRepo, llmClient)
 	adminAddressHandler := adminHandlers.NewAddressHandler(addressService, logger)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"north-post/service/internal/domain/v1/models"
+	"north-post/service/internal/infra"
 	"slices"
 	"time"
 
@@ -359,7 +360,9 @@ func (r *AddressRepository) SyncToTypesense(
 			break
 		}
 		if err != nil {
-			r.logger.Error("failed to iterate documents for typesense sync", "error", "err")
+			r.logger.Error("failed to iterate documents for typesense sync",
+				"collectionName", collectionName,
+				"error", err)
 			return nil, fmt.Errorf("failed to fetch documents for typesense sync: %w", err)
 		}
 		var address models.AddressItem
@@ -370,15 +373,12 @@ func (r *AddressRepository) SyncToTypesense(
 			)
 			continue
 		}
-		documents = append(documents, models.TypesenseAddressRecord{
+		documents = append(documents, infra.TypesenseAddressRecord{
 			ID:         address.ID,
 			Name:       address.Name,
 			BriefIntro: address.BriefIntro,
 			Tags:       address.Tags,
 		})
-	}
-	if len(documents) == 0 {
-		return &SyncToTypesenseResult{}, nil
 	}
 	// To sync with typesense, first we drop the entire collection
 	_, err := r.typesense.Collection(collectionName).Delete(ctx)
@@ -393,7 +393,7 @@ func (r *AddressRepository) SyncToTypesense(
 		}
 	}
 	// Then we create a new collection with the same key
-	schema := models.GetTypesenseAddressCollectionSchema(collectionName)
+	schema := infra.GetTypesenseAddressCollectionSchema(collectionName)
 	_, err = r.typesense.Collections().Create(ctx, schema)
 	if err != nil {
 		r.logger.Error(
@@ -402,6 +402,10 @@ func (r *AddressRepository) SyncToTypesense(
 			"error", err,
 		)
 		return nil, fmt.Errorf("failed to create typesense collection: %w", err)
+	}
+	// if no documents, we drop all old data, create empty collection, then return
+	if len(documents) == 0 {
+		return &SyncToTypesenseResult{}, nil
 	}
 	action := api.Create
 	params := &api.ImportDocumentsParams{Action: &action}
@@ -412,7 +416,7 @@ func (r *AddressRepository) SyncToTypesense(
 			"collectionName", collectionName,
 			"error", err,
 		)
-		return nil, fmt.Errorf("failed to import documents to typesese: %w", err)
+		return nil, fmt.Errorf("failed to import documents to typesense: %w", err)
 	}
 	// Tally results
 	success := 0
