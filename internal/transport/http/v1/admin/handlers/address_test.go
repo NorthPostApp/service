@@ -79,17 +79,28 @@ func (m *MockAddressService) GetAllTags(
 	args := m.Called(ctx, input)
 	return args.Get(0).(*services.GetAllTagsOutput), args.Error(1)
 }
+func (m *MockAddressService) SyncToTypesense(
+	ctx context.Context,
+	input services.SyncToTypesenseInput,
+) (*services.SyncToTypesenseOutput, error) {
+	args := m.Called(ctx, input)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*services.SyncToTypesenseOutput), args.Error(1)
+}
 
 func setupRouter(handler *AddressHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
-	r.POST("/admin/address", handler.GetAllAddresses)
 	r.GET("/admin/address/:id", handler.GetAddressById)
 	r.GET("/admin/address/tags", handler.GetAllTags)
-	r.DELETE("/admin/address/:id", handler.DeleteAddress)
-	r.PUT("/admin/address", handler.CreateNewAddress)
+	r.POST("/admin/address", handler.GetAllAddresses)
 	r.POST("/admin/address/generate", handler.GenerateNewAddress)
 	r.POST("/admin/address/update", handler.UpdateAddress)
+	r.POST("/admin/address/sync", handler.SyncToTypesense)
+	r.PUT("/admin/address", handler.CreateNewAddress)
+	r.DELETE("/admin/address/:id", handler.DeleteAddress)
 	return r
 }
 
@@ -653,6 +664,73 @@ func TestGetAllTags_GetAllTags(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.language, response.Data.Language)
 				mockSrv.AssertExpectations(t)
+			}
+		})
+	}
+}
+
+func TestSyncToTypesense(t *testing.T) {
+	t.Parallel()
+	mockSrv := new(MockAddressService)
+	handler := NewAddressHandler(mockSrv, slog.Default())
+	router := setupRouter(handler)
+	tests := []struct {
+		name           string
+		url            string
+		language       models.Language
+		validLanguage  bool
+		mockOutput     *services.SyncToTypesenseOutput
+		mockError      error
+		expectedStatus int
+	}{
+		{
+			name:           "success",
+			url:            "/admin/address/sync",
+			language:       "en",
+			validLanguage:  true,
+			mockOutput:     &services.SyncToTypesenseOutput{Total: 10, Success: 10, Failed: 0},
+			mockError:      nil,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "invalid language",
+			url:            "/admin/address/sync",
+			language:       "e",
+			validLanguage:  false,
+			mockOutput:     nil,
+			mockError:      nil,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "failed request",
+			url:            "/admin/address/sync",
+			language:       "zh",
+			validLanguage:  true,
+			mockOutput:     nil,
+			mockError:      errors.New("failed request"),
+			expectedStatus: http.StatusInternalServerError,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.validLanguage {
+				mockSrv.On("SyncToTypesense", mock.Anything, mock.Anything).Return(tt.mockOutput, tt.mockError).Once()
+			}
+			body, _ := json.Marshal(dto.SyncToTypesenseRequest{Language: tt.language})
+			req, _ := http.NewRequest("POST", tt.url, bytes.NewBuffer(body))
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.mockError == nil && tt.validLanguage {
+				var response dto.SyncToTypesenseDTO
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.mockOutput.Success, response.Success)
+				mockSrv.AssertCalled(t, "SyncToTypesense", mock.Anything, mock.Anything)
+				mockSrv.AssertExpectations(t)
+			}
+			if !tt.validLanguage {
+				mockSrv.AssertNotCalled(t, "SyncToTypesense")
 			}
 		})
 	}

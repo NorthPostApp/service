@@ -98,6 +98,18 @@ func (m *mockAddressRepository) GetAllTags(
 	return record, args.Error(1)
 }
 
+func (m *mockAddressRepository) SyncToTypesense(
+	ctx context.Context,
+	opts repository.SyncToTypesenseOption,
+) (*repository.SyncToTypesenseResult, error) {
+	args := m.Called(ctx, opts)
+	var result *repository.SyncToTypesenseResult
+	if value := args.Get(0); value != nil {
+		result, _ = value.(*repository.SyncToTypesenseResult)
+	}
+	return result, args.Error(1)
+}
+
 type mockLLMClient struct {
 	mock.Mock
 }
@@ -517,4 +529,32 @@ func TestAddressService_GetAllTags_Error(t *testing.T) {
 	output, err := service.GetAllTags(context.Background(), input)
 	assert.Nil(t, output)
 	assert.NotNil(t, err)
+}
+
+func TestAddressService_SyncToTypesense(t *testing.T) {
+	t.Parallel()
+	repo := new(mockAddressRepository)
+	llm := new(mockLLMClient)
+	service := NewAddressService(repo, llm)
+	input := SyncToTypesenseInput{Language: "en"}
+	mockOutput := repository.SyncToTypesenseResult{Total: 10, Success: 10, Failed: 1}
+	repo.On("SyncToTypesense", mock.Anything, mock.Anything).Return(&mockOutput, nil).Once()
+	output, err := service.SyncToTypesense(context.Background(), input)
+	assert.NotNil(t, output)
+	assert.Nil(t, err)
+	assert.Equal(t, mockOutput.Total, output.Total)
+	assert.Equal(t, mockOutput.Success, output.Success)
+	assert.Equal(t, mockOutput.Failed, output.Failed)
+}
+
+func TestAddressService_SyncToTypesense_Error(t *testing.T) {
+	t.Parallel()
+	repo := new(mockAddressRepository)
+	llm := new(mockLLMClient)
+	service := NewAddressService(repo, llm)
+	input := SyncToTypesenseInput{Language: "en"}
+	repo.On("SyncToTypesense", mock.Anything, mock.Anything).Return(nil, assert.AnError).Once()
+	output, err := service.SyncToTypesense(context.Background(), input)
+	assert.NotNil(t, err)
+	assert.Nil(t, output)
 }
