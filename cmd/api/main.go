@@ -60,6 +60,13 @@ func main() {
 		}
 	}()
 
+	// Initialize typesense client
+	typesenseClient, err := infra.NewTypesenseClient(logger)
+	if err != nil {
+		logger.Error("failed to initialize typesense service", "error", err)
+		log.Fatalf("failed to initialize typesense service: %v", err)
+	}
+
 	// Initialize storage bucket client
 	storageBucketClient, err := infra.NewStorageBucketClient(logger)
 	if err != nil {
@@ -75,7 +82,10 @@ func main() {
 	}
 
 	// Address service
-	addressRepo := repository.NewAddressRepository(firebaseClient.Firestore, logger)
+	addressRepo := repository.NewAddressRepository(
+		firebaseClient.Firestore,
+		typesenseClient.TypeSense,
+		logger)
 	addressService := services.NewAddressService(addressRepo, llmClient)
 	adminAddressHandler := adminHandlers.NewAddressHandler(addressService, logger)
 

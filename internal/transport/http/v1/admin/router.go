@@ -25,6 +25,7 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.
 			address.POST("", h.Address.GetAllAddresses)
 			address.POST("/generate", h.Address.GenerateNewAddress)
 			address.POST("/update", h.Address.UpdateAddress)
+			address.POST("/sync", h.Address.SyncToTypesense)
 			// PUT
 			address.PUT("", h.Address.CreateNewAddress)
 			// DELETE

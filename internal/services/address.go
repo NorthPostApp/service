@@ -22,6 +22,7 @@ type addressRepository interface {
 	DeleteAddress(context.Context, repository.DeleteAddressOption) (string, error)
 	RefreshTags(context.Context, repository.RefreshTagsOption) (*models.TagsRecord, error)
 	GetAllTags(context.Context, repository.GetAllTagsOption) (*models.TagsRecord, error)
+	SyncToTypesense(context.Context, repository.SyncToTypesenseOption) (*repository.SyncToTypesenseResult, error)
 }
 
 type llmClient interface {
@@ -122,6 +123,16 @@ type GetAllTagsInput struct {
 
 type GetAllTagsOutput struct {
 	TagsRecord models.TagsRecord
+}
+
+type SyncToTypesenseInput struct {
+	Language models.Language
+}
+
+type SyncToTypesenseOutput struct {
+	Total   int
+	Success int
+	Failed  int
 }
 
 func (s *AddressService) GetAllAddresses(
@@ -255,4 +266,19 @@ func (s *AddressService) GetAllTags(
 		return nil, err
 	}
 	return &GetAllTagsOutput{TagsRecord: *record}, nil
+}
+
+func (s *AddressService) SyncToTypesense(
+	ctx context.Context,
+	input SyncToTypesenseInput) (*SyncToTypesenseOutput, error) {
+	opts := repository.SyncToTypesenseOption{Language: input.Language}
+	result, err := s.repo.SyncToTypesense(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	return &SyncToTypesenseOutput{
+		Total:   result.Total,
+		Success: result.Success,
+		Failed:  result.Failed,
+	}, nil
 }

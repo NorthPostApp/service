@@ -1,5 +1,7 @@
 package models
 
+import "github.com/typesense/typesense-go/v4/typesense/api"
+
 type AddressGenerationSchema struct {
 	Name       string   `json:"name"`
 	BriefIntro string   `json:"briefIntro"`
@@ -34,4 +36,24 @@ type Address struct {
 type TagsRecord struct {
 	Tags        map[string][]string `json:"tags" firestore:"tags"`
 	RefreshedAt int64               `json:"refreshedAt" firestore:"refreshedAt"`
+}
+
+// The typesense collection schema should be the same as this struct
+type TypesenseAddressRecord struct {
+	ID         string   `json:"id"`
+	Name       string   `json:"name"`
+	BriefIntro string   `json:"briefIntro"`
+	Tags       []string `json:"tags"`
+}
+
+func GetTypesenseAddressCollectionSchema(name string) *api.CollectionSchema {
+	return &api.CollectionSchema{
+		Name: name,
+		Fields: []api.Field{
+			{Name: "id", Type: "string"},
+			{Name: "name", Type: "string"},
+			{Name: "briefIntro", Type: "string"},
+			{Name: "tags", Type: "string[]"},
+		},
+	}
 }

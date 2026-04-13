@@ -23,6 +23,7 @@ type addressService interface {
 	DeleteAddress(ctx context.Context, input services.DeleteAddressInput) (*services.DeleteAddressOutput, error)
 	RefreshTags(ctx context.Context, input services.RefreshTagsInput) (*services.RefreshTagsOutput, error)
 	GetAllTags(ctx context.Context, input services.GetAllTagsInput) (*services.GetAllTagsOutput, error)
+	SyncToTypesense(ctx context.Context, input services.SyncToTypesenseInput) (*services.SyncToTypesenseOutput, error)
 }
 
 type AddressHandler struct {
@@ -321,6 +322,40 @@ func (h *AddressHandler) GetAllTags(c *gin.Context) {
 			return
 		}
 		response = dto.GetAllTagsResponse{Data: dto.ToTagsRecordDTO(output.TagsRecord, language)}
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// SyncToTypesense godoc
+// @Summary Sync addresses to Typesense
+// @Description Syncs all addresses for the specified language from Firestore to the Typesense search index
+// @Tags Admin Address
+// @Accept json
+// @Produce json
+// @Param request body dto.SyncToTypesenseRequest true "Request body"
+// @Success 200 {object} dto.SyncToTypesenseDTO
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /admin/address/sync [post]
+func (h *AddressHandler) SyncToTypesense(c *gin.Context) {
+	var req dto.SyncToTypesenseRequest
+	if !utils.BindJSON(c, &req, h.logger) {
+		return
+	}
+	if !utils.ValidateLanguage(c, req.Language, h.logger) {
+		return
+	}
+	input := services.SyncToTypesenseInput{Language: req.Language}
+	output, err := h.service.SyncToTypesense(c.Request.Context(), input)
+	if err != nil {
+		h.logger.Error("failed to sync to Typesense", "language", req.Language, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	response := dto.SyncToTypesenseDTO{
+		Total:   output.Total,
+		Success: output.Success,
+		Failed:  output.Failed,
 	}
 	c.JSON(http.StatusOK, response)
 }

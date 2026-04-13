@@ -101,6 +101,15 @@ type TagsRecordDTO struct {
 	Language    models.Language     `json:"language"`
 }
 
+type SyncToTypesenseRequest struct {
+	Language models.Language `json:"language" binding:"required"`
+}
+type SyncToTypesenseDTO struct {
+	Total   int `json:"total"`
+	Success int `json:"success"`
+	Failed  int `json:"failed"`
+}
+
 func ToAddressDTO(addressItem models.AddressItem) AddressItemDTO {
 	address := addressItem.Address
 	addressDto := AddressDTO{

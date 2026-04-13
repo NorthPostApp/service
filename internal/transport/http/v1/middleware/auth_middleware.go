@@ -49,7 +49,6 @@ func AuthMiddleware(auth authClient, logger *slog.Logger) gin.HandlerFunc {
 
 		// verify the firebase id token
 		idToken := headerParts[1]
-		fmt.Println(idToken)
 		authToken, err := auth.VerifyIDToken(c, idToken)
 		if err != nil {
 			logger.Error("Failed to verify ID token", "error", err, "clientIP", clientIP)
