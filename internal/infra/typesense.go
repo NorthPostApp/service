@@ -23,7 +23,7 @@ func NewTypesenseClient(logger *slog.Logger) (*TypesenseClient, error) {
 		typesense.WithServer(typesenseURL),
 		typesense.WithAPIKey(apiKey),
 	)
-	logger.Info("Typesense client initialized successfully")
+	logger.Info("Typesense client initialized successfully", "server", typesenseURL)
 	return &TypesenseClient{Client: client}, nil
 }
 
