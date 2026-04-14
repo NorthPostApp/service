@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"north-post/service/internal/domain/v1/models"
@@ -12,8 +11,6 @@ import (
 
 	"cloud.google.com/go/firestore"
 	pb "cloud.google.com/go/firestore/apiv1/firestorepb"
-	"github.com/typesense/typesense-go/v4/typesense"
-	"github.com/typesense/typesense-go/v4/typesense/api"
 	"google.golang.org/api/iterator"
 )
 
@@ -28,11 +25,11 @@ var tagCategories = []string{"country", "role", "figure"}
 
 type AddressRepository struct {
 	client    *firestore.Client
-	typesense *typesense.Client
+	typesense *infra.TypesenseClient
 	logger    *slog.Logger
 }
 
-func NewAddressRepository(client *firestore.Client, typesense *typesense.Client, logger *slog.Logger) *AddressRepository {
+func NewAddressRepository(client *firestore.Client, typesense *infra.TypesenseClient, logger *slog.Logger) *AddressRepository {
 	return &AddressRepository{
 		client:    client,
 		typesense: typesense,
@@ -220,6 +217,7 @@ func (r *AddressRepository) UpdateAddress(ctx context.Context, opts UpdateAddres
 		r.logger.Error("failed to update address", "addressID", opts.ID, "error", err)
 		return nil, fmt.Errorf("failed to update address with ID %s: %w", opts.ID, err)
 	}
+	r.typesense.UpsertAddressData(ctx, collectionName, &addressItem)
 	return &addressItem, nil
 }
 
@@ -231,6 +229,7 @@ func (r *AddressRepository) DeleteAddress(ctx context.Context, opts DeleteAddres
 		r.logger.Error("failed to delete address", "addressID", opts.ID, "error", err)
 		return "", fmt.Errorf("failed to delete address with ID %s: %w", opts.ID, err)
 	}
+	r.typesense.DeleteAddressData(ctx, collectionName, opts.ID)
 	return opts.ID, nil
 }
 
@@ -262,16 +261,18 @@ func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNew
 	}
 	// Auto generate timestamp
 	now := time.Now().UnixMilli()
-	opts.AddressItem.CreatedAt = now
-	opts.AddressItem.UpdatedAt = now
+	addressItem := opts.AddressItem
+	addressItem.CreatedAt = now
+	addressItem.UpdatedAt = now
 	// Create document with auto-generated ID
 	docRef := r.client.Collection(collectionName).NewDoc()
-	opts.AddressItem.ID = docRef.ID
-	_, err := docRef.Set(ctx, opts.AddressItem)
+	addressItem.ID = docRef.ID
+	_, err := docRef.Set(ctx, addressItem)
 	if err != nil {
 		r.logger.Error("failed to create address", "error", err)
 		return "", fmt.Errorf("failed to create address: %w", err)
 	}
+	r.typesense.UpsertAddressData(ctx, collectionName, &addressItem)
 	return docRef.ID, nil
 }
 
@@ -373,68 +374,21 @@ func (r *AddressRepository) SyncToTypesense(
 			)
 			continue
 		}
-		documents = append(documents, infra.TypesenseAddressRecord{
-			ID:         address.ID,
-			Name:       address.Name,
-			BriefIntro: address.BriefIntro,
-			Tags:       address.Tags,
-		})
+		documents = append(documents, r.typesense.CreateAddressRecord(&address))
 	}
-	// To sync with typesense, first we drop the entire collection
-	_, err := r.typesense.Collection(collectionName).Delete(ctx)
-	if err != nil {
-		var httpErr *typesense.HTTPError
-		if !errors.As(err, &httpErr) || httpErr.Status != 404 {
-			r.logger.Error("failed to delete typesense collection when syncing",
-				"collectionName", collectionName,
-				"error", err,
-			)
-			return nil, fmt.Errorf("failed to delete typesense collection when syncing: %w", err)
-		}
-	}
-	// Then we create a new collection with the same key
-	schema := infra.GetTypesenseAddressCollectionSchema(collectionName)
-	_, err = r.typesense.Collections().Create(ctx, schema)
+	// sync with typesense
+	syncTypesenseResult, err := r.typesense.SyncAddressDatabase(ctx, collectionName, documents)
 	if err != nil {
 		r.logger.Error(
-			"failed to create typesense collection",
+			"failed to sync address database with typesense",
 			"collectionName", collectionName,
-			"error", err,
-		)
-		return nil, fmt.Errorf("failed to create typesense collection: %w", err)
-	}
-	// if no documents, we drop all old data, create empty collection, then return
-	if len(documents) == 0 {
-		return &SyncToTypesenseResult{}, nil
-	}
-	action := api.Create
-	params := &api.ImportDocumentsParams{Action: &action}
-	results, err := r.typesense.Collection(collectionName).Documents().Import(ctx, documents, params)
-	if err != nil {
-		r.logger.Error(
-			"failed to import documents to typesense",
-			"collectionName", collectionName,
-			"error", err,
-		)
-		return nil, fmt.Errorf("failed to import documents to typesense: %w", err)
-	}
-	// Tally results
-	success := 0
-	for _, result := range results {
-		if result.Success {
-			success++
-		} else {
-			r.logger.Warn(
-				"failed to sync document to typesense",
-				"id", result.Id,
-				"error", result.Error,
-			)
-		}
+			"error", err)
+		return nil, fmt.Errorf("failed to sync address database with typesense: %w", err)
 	}
 	return &SyncToTypesenseResult{
-		Total:   len(documents),
-		Success: success,
-		Failed:  len(results) - success,
+		Total:   syncTypesenseResult.Total,
+		Success: syncTypesenseResult.Success,
+		Failed:  syncTypesenseResult.Failed,
 	}, nil
 }
 
