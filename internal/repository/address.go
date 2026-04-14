@@ -217,7 +217,7 @@ func (r *AddressRepository) UpdateAddress(ctx context.Context, opts UpdateAddres
 		r.logger.Error("failed to update address", "addressID", opts.ID, "error", err)
 		return nil, fmt.Errorf("failed to update address with ID %s: %w", opts.ID, err)
 	}
-	r.typesense.UpsertAddressData(ctx, collectionName, &opts.AddressItem)
+	r.typesense.UpsertAddressData(ctx, collectionName, &addressItem)
 	return &addressItem, nil
 }
 
@@ -261,17 +261,18 @@ func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNew
 	}
 	// Auto generate timestamp
 	now := time.Now().UnixMilli()
-	opts.AddressItem.CreatedAt = now
-	opts.AddressItem.UpdatedAt = now
+	addressItem := opts.AddressItem
+	addressItem.CreatedAt = now
+	addressItem.UpdatedAt = now
 	// Create document with auto-generated ID
 	docRef := r.client.Collection(collectionName).NewDoc()
-	opts.AddressItem.ID = docRef.ID
-	_, err := docRef.Set(ctx, opts.AddressItem)
+	addressItem.ID = docRef.ID
+	_, err := docRef.Set(ctx, addressItem)
 	if err != nil {
 		r.logger.Error("failed to create address", "error", err)
 		return "", fmt.Errorf("failed to create address: %w", err)
 	}
-	r.typesense.UpsertAddressData(ctx, collectionName, &opts.AddressItem)
+	r.typesense.UpsertAddressData(ctx, collectionName, &addressItem)
 	return docRef.ID, nil
 }
 
