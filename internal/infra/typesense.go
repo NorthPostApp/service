@@ -17,13 +17,6 @@ type TypesenseClient struct {
 	logger *slog.Logger
 }
 
-type TypesenseSyncMode int
-
-const (
-	TypesenseAdd TypesenseSyncMode = iota
-	TypesenseDelete
-)
-
 func NewTypesenseClient(logger *slog.Logger) (*TypesenseClient, error) {
 	typesenseURL := os.Getenv("TYPESENSE_URL")
 	apiKey := os.Getenv("TYPESENSE_API_KEY")
