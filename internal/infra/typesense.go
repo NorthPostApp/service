@@ -192,7 +192,7 @@ func (c *TypesenseClient) SearchAddresses(
 		c.logger.Error("typesense search failed",
 			"collectionName", params.CollectionName,
 			"keywords", params.Keywords,
-			"tags", params.Keywords,
+			"tags", params.Tags,
 			"page", params.Page,
 			"pageSize", params.PageSize,
 		)

@@ -70,7 +70,7 @@ func (h *AddressHandler) GetAddresses(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	response := dto.GetAddressResponse{
+	response := dto.GetAddressesResponse{
 		Data: dto.ToGetAddressesResponseDTO(output, req.Language),
 	}
 	c.JSON(http.StatusOK, response)

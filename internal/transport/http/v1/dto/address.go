@@ -17,7 +17,7 @@ type GetAddressesRequest struct {
 	Page     int             `json:"page"`
 }
 
-type GetAddressResponse struct {
+type GetAddressesResponse struct {
 	Data GetAddressesResponseDTO `json:"data"`
 }
 

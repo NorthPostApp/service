@@ -124,9 +124,9 @@ func (r *AddressRepository) GetAddresses(ctx context.Context, opts GetAddressesO
 		)
 		return nil, fmt.Errorf("failed to batch fetch addresses: %w", err)
 	}
-	addresses := make([]models.AddressItem, len(docs))
+	addresses := []models.AddressItem{}
 	failedCount := 0
-	for i, doc := range docs {
+	for _, doc := range docs {
 		if !doc.Exists() {
 			failedCount++
 			r.logger.Warn("address document not found", "docID", doc.Ref.ID)
@@ -135,13 +135,14 @@ func (r *AddressRepository) GetAddresses(ctx context.Context, opts GetAddressesO
 		if err := doc.DataTo(&addressItem); err != nil {
 			failedCount++
 			r.logger.Warn("failed to parse address document", "docID", doc.Ref.ID, "error", err)
+		} else {
+			addresses = append(addresses, addressItem)
 		}
-		addresses[i] = addressItem
 	}
 	if failedCount > 0 {
 		r.logger.Warn("some documents failed to fetch", "count", failedCount)
 	}
-	// should ensure result.PageSize never be 0 (it is guardrailed in SearchAddress function)
+	// should ensure result.PageSize never be 0 (it is guardrailed in SearchAddresses function)
 	guardedPageSize := math.Max(float64(result.PageSize), 1.0)
 	return &GetAddressesResponse{
 		Addresses:  addresses,

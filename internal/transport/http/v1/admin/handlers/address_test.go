@@ -161,7 +161,7 @@ func TestGetAllAddresses(t *testing.T) {
 			router.ServeHTTP(w, req)
 			assert.Equal(t, tt.expectedStatus, w.Code)
 			if w.Code == http.StatusOK {
-				var response dto.GetAddressResponse
+				var response dto.GetAddressesResponse
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
 				assert.Equal(t, tt.mockOutput.Addresses[0].ID, response.Data.Addresses[0].ID)
