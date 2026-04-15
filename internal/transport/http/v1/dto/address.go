@@ -9,15 +9,16 @@ type AddressID struct {
 	ID string `json:"id"`
 }
 
-type GetAllAddressesRequest struct {
-	Language  models.Language `json:"language" binding:"required"`
-	Tags      []string        `json:"tags,omitempty"`
-	PageSize  int             `json:"pageSize,omitempty"`
-	LastDocID string          `json:"lastDocId,omitempty"`
+type GetAddressesRequest struct {
+	Language models.Language `json:"language" binding:"required"`
+	Keywords string          `json:"keywords"`
+	Tags     []string        `json:"tags"`
+	PageSize int             `json:"pageSize"`
+	Page     int             `json:"page"`
 }
 
-type GetAllAddressResponse struct {
-	Data GetAllAddressesResponseDTO `json:"data"`
+type GetAddressesResponse struct {
+	Data GetAddressesResponseDTO `json:"data"`
 }
 
 type GetAddressByIdResponse struct {
@@ -87,11 +88,11 @@ type AddressDTO struct {
 	Region       string `json:"region" binding:"required"`
 }
 
-type GetAllAddressesResponseDTO struct {
+type GetAddressesResponseDTO struct {
 	Addresses  []AddressItemDTO `json:"addresses"`
 	TotalCount int64            `json:"totalCount"`
-	LastDocID  string           `json:"lastDocId"`
-	HasMore    bool             `json:"hasMore"`
+	TotalPages int              `json:"totalPages"`
+	Page       int              `json:"page"`
 	Language   models.Language  `json:"language"`
 }
 
@@ -140,12 +141,12 @@ func ToAddressDTOs(addresses []models.AddressItem) []AddressItemDTO {
 	return output
 }
 
-func ToGetAllAddressesResponseDTO(output *services.GetAllAddressesOutput, language models.Language) GetAllAddressesResponseDTO {
-	return GetAllAddressesResponseDTO{
+func ToGetAddressesResponseDTO(output *services.GetAddressesOutput, language models.Language) GetAddressesResponseDTO {
+	return GetAddressesResponseDTO{
 		Addresses:  ToAddressDTOs(output.Addresses),
 		TotalCount: output.TotalCount,
-		LastDocID:  output.LastDocID,
-		HasMore:    output.HasMore,
+		TotalPages: output.TotalPages,
+		Page:       output.Page,
 		Language:   language,
 	}
 }
