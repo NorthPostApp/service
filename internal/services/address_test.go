@@ -17,15 +17,15 @@ type mockAddressRepository struct {
 	mock.Mock
 }
 
-func (m *mockAddressRepository) GetAllAddresses(
+func (m *mockAddressRepository) GetAddresses(
 	ctx context.Context,
-	opts repository.GetAllAddressesOptions,
-) (*repository.GetAllAddressesResponse, error) {
+	opts repository.GetAddressesOptions,
+) (*repository.GetAddressesResponse, error) {
 	args := m.Called(ctx, opts)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*repository.GetAllAddressesResponse), args.Error(1)
+	return args.Get(0).(*repository.GetAddressesResponse), args.Error(1)
 }
 
 func (m *mockAddressRepository) GetAddressById(
@@ -139,29 +139,34 @@ func setupAddressService() (*AddressService, *mockAddressRepository, *mockLLMCli
 func TestAddressService_GetAddresses(t *testing.T) {
 	t.Parallel()
 	service, repo, _ := setupAddressService()
-	input := GetAllAddressesInput{
+	input := GetAddressesInput{
 		Language: models.LanguageEN,
+		Keywords: "",
 		Tags:     []string{"featured", "outdoor"},
-		PageSize: 0,
+		PageSize: 20,
+		Page:     1,
 	}
-	expectedOptions := repository.GetAllAddressesOptions{
+	expectedOptions := repository.GetAddressesOptions{
 		Language: input.Language,
+		Keywords: input.Keywords,
 		Tags:     input.Tags,
-		PageSize: defaultPageSize,
+		PageSize: input.PageSize,
+		Page:     input.Page,
 	}
 	expectedAddresses := []models.AddressItem{
 		{ID: "1", Name: "Address One"},
 		{ID: "2", Name: "Address Two"},
 	}
-	expectedResponse := &repository.GetAllAddressesResponse{
+	expectedResponse := &repository.GetAddressesResponse{
 		Addresses:  expectedAddresses,
-		HasMore:    false,
 		TotalCount: 2,
+		Page:       1,
+		TotalPages: 1,
 	}
 	repo.On(
-		"GetAllAddresses",
+		"GetAddresses",
 		mock.Anything,
-		mock.MatchedBy(func(opts repository.GetAllAddressesOptions) bool {
+		mock.MatchedBy(func(opts repository.GetAddressesOptions) bool {
 			if opts.Language != expectedOptions.Language || opts.PageSize != expectedOptions.PageSize {
 				return false
 			}
@@ -176,69 +181,33 @@ func TestAddressService_GetAddresses(t *testing.T) {
 			return true
 		}),
 	).Return(expectedResponse, nil).Once()
-	output, err := service.GetAllAddresses(context.Background(), input)
+	output, err := service.GetAddresses(context.Background(), input)
 	repo.AssertExpectations(t)
 	assert.NoError(t, err)
 	assert.NotNil(t, output)
 	assert.Equal(t, expectedResponse.Addresses, output.Addresses)
 	assert.Equal(t, expectedResponse.TotalCount, output.TotalCount)
-	assert.Equal(t, expectedResponse.HasMore, output.HasMore)
 }
 
 func TestAddressService_GetAddresses_Error(t *testing.T) {
 	t.Parallel()
 	service, repo, _ := setupAddressService()
-	input := GetAllAddressesInput{
+	input := GetAddressesInput{
 		Language: models.LanguageZH,
+		Keywords: "writer",
 		Tags:     []string{"cafe"},
-		PageSize: defaultPageSize,
+		PageSize: 25,
+		Page:     1,
 	}
 	repo.On(
-		"GetAllAddresses",
+		"GetAddresses",
 		mock.Anything,
 		mock.Anything,
 	).Return(nil, assert.AnError).Once()
-	output, err := service.GetAllAddresses(context.Background(), input)
+	output, err := service.GetAddresses(context.Background(), input)
 	repo.AssertExpectations(t)
 	assert.Error(t, err)
 	assert.Nil(t, output)
-}
-
-func TestAddressService_GetAddresses_PageLimit(t *testing.T) {
-	t.Parallel()
-	service, repo, _ := setupAddressService()
-	input := GetAllAddressesInput{
-		Language: models.LanguageZH,
-		Tags:     []string{""},
-		PageSize: defaultPageSize + 5,
-	}
-	expectedOptions := repository.GetAllAddressesOptions{
-		Language: input.Language,
-		Tags:     input.Tags,
-		PageSize: defaultPageSize,
-	}
-	repo.On(
-		"GetAllAddresses",
-		mock.Anything,
-		mock.MatchedBy(func(opts repository.GetAllAddressesOptions) bool {
-			if opts.Language != expectedOptions.Language {
-				return false
-			}
-			if opts.PageSize != expectedOptions.PageSize {
-				return false
-			}
-			if len(opts.Tags) != len(expectedOptions.Tags) {
-				return false
-			}
-			for i := range opts.Tags {
-				if opts.Tags[i] != expectedOptions.Tags[i] {
-					return false
-				}
-			}
-			return true
-		}),
-	).Return(nil, assert.AnError).Once()
-	service.GetAllAddresses(context.Background(), input)
 }
 
 func TestAddressService_GetAddressById(t *testing.T) {

@@ -18,7 +18,7 @@ type addressService interface {
 	CreateNewAddress(ctx context.Context, input services.CreateNewAddressInput) (*services.CreateNewAddressOutput, error)
 	GenerateNewAddress(ctx context.Context, input services.GenerateAddressInput) (*services.GenerateAddressOutput, error)
 	GetAddressById(ctx context.Context, input services.GetAddressByIdInput) (*services.GetAddressByIdOutput, error)
-	GetAllAddresses(ctx context.Context, input services.GetAllAddressesInput) (*services.GetAllAddressesOutput, error)
+	GetAddresses(ctx context.Context, input services.GetAddressesInput) (*services.GetAddressesOutput, error)
 	UpdateAddress(ctx context.Context, input services.UpdateAddressInput) (*services.UpdateAddressOutput, error)
 	DeleteAddress(ctx context.Context, input services.DeleteAddressInput) (*services.DeleteAddressOutput, error)
 	RefreshTags(ctx context.Context, input services.RefreshTagsInput) (*services.RefreshTagsOutput, error)
@@ -39,38 +39,39 @@ func NewAddressHandler(service addressService, logger *slog.Logger) *AddressHand
 }
 
 // GetAddresses godoc
-// @Summary Get all addresses
-// @Description Get all addresses by language and optional tag filters
+// @Summary Get addresses
+// @Description Get addresses by language, keywords and optional tag filters
 // @Tags Admin Address
 // @Accept json
 // @Produce json
-// @Param request body dto.GetAllAddressesRequest true "Request body"
-// @Success 200 {object} dto.GetAllAddressResponse
+// @Param request body dto.GetAddressesRequest true "Request body"
+// @Success 200 {object} dto.GetAddressResponse
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /admin/address [post]
-func (h *AddressHandler) GetAllAddresses(c *gin.Context) {
-	var req dto.GetAllAddressesRequest
+func (h *AddressHandler) GetAddresses(c *gin.Context) {
+	var req dto.GetAddressesRequest
 	if !utils.BindJSON(c, &req, h.logger) {
 		return
 	}
 	if !utils.ValidateLanguage(c, req.Language, h.logger) {
 		return
 	}
-	input := services.GetAllAddressesInput{
-		Language:      req.Language,
-		Tags:          req.Tags,
-		PageSize:      req.PageSize,
-		StartAfterDoc: req.LastDocID,
+	input := services.GetAddressesInput{
+		Language: req.Language,
+		Keywords: req.Keywords,
+		Tags:     req.Tags,
+		PageSize: req.PageSize,
+		Page:     req.Page,
 	}
-	output, err := h.service.GetAllAddresses(c.Request.Context(), input)
+	output, err := h.service.GetAddresses(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to get addresses", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	response := dto.GetAllAddressResponse{
-		Data: dto.ToGetAllAddressesResponseDTO(output, req.Language),
+	response := dto.GetAddressResponse{
+		Data: dto.ToGetAddressesResponseDTO(output, req.Language),
 	}
 	c.JSON(http.StatusOK, response)
 }

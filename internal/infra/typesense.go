@@ -7,9 +7,16 @@ import (
 	"log/slog"
 	"north-post/service/internal/domain/v1/models"
 	"os"
+	"strings"
 
 	"github.com/typesense/typesense-go/v4/typesense"
 	"github.com/typesense/typesense-go/v4/typesense/api"
+	"github.com/typesense/typesense-go/v4/typesense/api/pointer"
+)
+
+const (
+	defaultPageSize = 20
+	maxPagesize     = 100
 )
 
 type TypesenseClient struct {
@@ -37,16 +44,21 @@ type TypesenseAddressRecord struct {
 	Name       string   `json:"name"`
 	BriefIntro string   `json:"briefIntro"`
 	Tags       []string `json:"tags"`
+	UpdatedAt  int64    `json:"updatedAt"`
 }
 
-func (c *TypesenseClient) GetAddressCollectionSchema(name string) *api.CollectionSchema {
+func (c *TypesenseClient) GetAddressCollectionSchema(
+	name string,
+	language models.Language,
+) *api.CollectionSchema {
 	return &api.CollectionSchema{
 		Name: name,
 		Fields: []api.Field{
 			{Name: "id", Type: "string"},
-			{Name: "name", Type: "string"},
-			{Name: "briefIntro", Type: "string"},
+			{Name: "name", Type: "string", Locale: pointer.String(language.Get())},
+			{Name: "briefIntro", Type: "string", Locale: pointer.String(language.Get())},
 			{Name: "tags", Type: "string[]"},
+			{Name: "updatedAt", Type: "int64"},
 		},
 	}
 }
@@ -57,6 +69,7 @@ func (c *TypesenseClient) CreateAddressRecord(addressItem *models.AddressItem) T
 		Name:       addressItem.Name,
 		BriefIntro: addressItem.BriefIntro,
 		Tags:       addressItem.Tags,
+		UpdatedAt:  addressItem.UpdatedAt,
 	}
 }
 
@@ -66,8 +79,24 @@ type SyncDatabaseResult struct {
 	Failed  int
 }
 
+type SearchAddressesParams struct {
+	CollectionName string
+	Keywords       string
+	Tags           []string
+	PageSize       int
+	Page           int
+}
+
+type SearchAddressesResult struct {
+	Hits       []string // file IDs
+	Page       int
+	PageSize   int
+	TotalCount int64
+}
+
 func (c *TypesenseClient) SyncAddressDatabase(
 	ctx context.Context,
+	language models.Language,
 	collectionName string,
 	documents []interface{}) (*SyncDatabaseResult, error) {
 	// first drop the entire collection to avoid mismatch records
@@ -83,7 +112,7 @@ func (c *TypesenseClient) SyncAddressDatabase(
 		}
 	}
 	// create a new collection
-	schema := c.GetAddressCollectionSchema(collectionName)
+	schema := c.GetAddressCollectionSchema(collectionName, language)
 	_, err = c.Client.Collections().Create(ctx, schema)
 	if err != nil {
 		c.logger.Error(
@@ -128,6 +157,57 @@ func (c *TypesenseClient) SyncAddressDatabase(
 		Total:   len(results),
 		Success: success,
 		Failed:  len(results) - success,
+	}, nil
+}
+
+func (c *TypesenseClient) SearchAddresses(
+	ctx context.Context, params *SearchAddressesParams) (*SearchAddressesResult, error) {
+	q := "*"
+	if params.Keywords != "" {
+		q = params.Keywords
+	}
+	page := params.Page
+	if page <= 0 {
+		page = 1
+	}
+	perPage := params.PageSize
+	if perPage <= 0 {
+		perPage = defaultPageSize
+	} else if perPage > maxPagesize {
+		perPage = maxPagesize
+	}
+	searchParams := &api.SearchCollectionParams{
+		Q:       pointer.String(q),
+		QueryBy: pointer.String("name,briefIntro"),
+		SortBy:  pointer.String("updatedAt:desc"),
+		Page:    &page,
+		PerPage: &perPage,
+	}
+	if len(params.Tags) > 0 {
+		filterStr := fmt.Sprintf("tags:=[%s]", strings.Join(params.Tags, ","))
+		searchParams.FilterBy = &filterStr
+	}
+	result, err := c.Client.Collection(params.CollectionName).Documents().Search(ctx, searchParams)
+	if err != nil {
+		c.logger.Error("typesense search failed",
+			"collectionName", params.CollectionName,
+			"keywords", params.Keywords,
+			"tags", params.Keywords,
+			"page", params.Page,
+			"pageSize", params.PageSize,
+		)
+		return nil, fmt.Errorf("typesense search failed: %w", err)
+	}
+	var records []string
+	for _, hit := range *result.Hits {
+		doc := *hit.Document
+		records = append(records, doc["id"].(string))
+	}
+	return &SearchAddressesResult{
+		Hits:       records,
+		TotalCount: int64(*result.Found),
+		Page:       int(*result.Page),
+		PageSize:   perPage,
 	}, nil
 }
 

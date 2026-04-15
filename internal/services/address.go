@@ -11,11 +11,9 @@ import (
 	"github.com/google/uuid"
 )
 
-const defaultPageSize = 100
-
 type addressRepository interface {
-	GetAllAddresses(context.Context, repository.GetAllAddressesOptions) (
-		*repository.GetAllAddressesResponse, error)
+	GetAddresses(context.Context, repository.GetAddressesOptions) (
+		*repository.GetAddressesResponse, error)
 	GetAddressById(context.Context, repository.GetAddressByIdOptions) (*models.AddressItem, error)
 	CreateNewAddress(context.Context, repository.CreateNewAddressOption) (string, error)
 	UpdateAddress(context.Context, repository.UpdateAddressOption) (*models.AddressItem, error)
@@ -45,18 +43,19 @@ func NewAddressService(repo addressRepository, llm llmClient) *AddressService {
 	}
 }
 
-type GetAllAddressesInput struct {
-	Language      models.Language
-	Tags          []string
-	PageSize      int
-	StartAfterDoc string
+type GetAddressesInput struct {
+	Language models.Language
+	Keywords string
+	Tags     []string
+	PageSize int
+	Page     int
 }
 
-type GetAllAddressesOutput struct {
+type GetAddressesOutput struct {
 	Addresses  []models.AddressItem
 	TotalCount int64
-	LastDocID  string
-	HasMore    bool
+	Page       int
+	TotalPages int
 }
 
 type GetAddressByIdInput struct {
@@ -135,29 +134,27 @@ type SyncToTypesenseOutput struct {
 	Failed  int
 }
 
-func (s *AddressService) GetAllAddresses(
+func (s *AddressService) GetAddresses(
 	ctx context.Context,
-	input GetAllAddressesInput,
-) (*GetAllAddressesOutput, error) {
+	input GetAddressesInput,
+) (*GetAddressesOutput, error) {
 	pageSize := input.PageSize
-	if pageSize <= 0 || pageSize > defaultPageSize {
-		pageSize = defaultPageSize
+	opts := repository.GetAddressesOptions{
+		Language: input.Language,
+		Keywords: input.Keywords,
+		Tags:     input.Tags,
+		PageSize: pageSize,
+		Page:     input.Page,
 	}
-	opts := repository.GetAllAddressesOptions{
-		Language:      input.Language,
-		Tags:          input.Tags,
-		PageSize:      pageSize,
-		StartAfterDoc: input.StartAfterDoc,
-	}
-	response, err := s.repo.GetAllAddresses(ctx, opts)
+	response, err := s.repo.GetAddresses(ctx, opts)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
-	return &GetAllAddressesOutput{
+	return &GetAddressesOutput{
 			Addresses:  response.Addresses,
 			TotalCount: response.TotalCount,
-			LastDocID:  response.LastDocID,
-			HasMore:    response.HasMore,
+			Page:       response.Page,
+			TotalPages: response.TotalPages,
 		},
 		nil
 }

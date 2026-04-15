@@ -22,7 +22,7 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.
 			address.GET("/:id", h.Address.GetAddressById)
 			address.GET("/tags", h.Address.GetAllTags)
 			// POST
-			address.POST("", h.Address.GetAllAddresses)
+			address.POST("", h.Address.GetAddresses)
 			address.POST("/generate", h.Address.GenerateNewAddress)
 			address.POST("/update", h.Address.UpdateAddress)
 			address.POST("/sync", h.Address.SyncToTypesense)
