@@ -151,3 +151,63 @@ func TestValidateMusicFilename(t *testing.T) {
 		})
 	}
 }
+
+func TestStringToFloat32(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected float32
+	}{
+		{
+			name:     "success",
+			input:    "32.0",
+			expected: float32(32.0),
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: float32(0),
+		},
+		{
+			name:     "invalid value",
+			input:    "invalid",
+			expected: float32(0),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := StringToFloat32(tt.input)
+			assert.Equal(t, tt.expected, output)
+		})
+	}
+}
+
+func TestStringToInt64(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected int64
+	}{
+		{
+			name:     "success",
+			input:    "32.0",
+			expected: int64(32),
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: int64(0),
+		},
+		{
+			name:     "invalid value",
+			input:    "invalid",
+			expected: int64(0),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := StringToInt64(tt.input)
+			assert.Equal(t, tt.expected, output)
+		})
+	}
+}

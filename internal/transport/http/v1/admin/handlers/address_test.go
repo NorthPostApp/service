@@ -722,10 +722,10 @@ func TestSyncToTypesense(t *testing.T) {
 			router.ServeHTTP(w, req)
 			assert.Equal(t, tt.expectedStatus, w.Code)
 			if tt.mockError == nil && tt.validLanguage {
-				var response dto.SyncToTypesenseDTO
+				var response dto.SyncToTypesenseResponse
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
-				assert.Equal(t, tt.mockOutput.Success, response.Success)
+				assert.Equal(t, tt.mockOutput.Success, response.Data.Success)
 				mockSrv.AssertCalled(t, "SyncToTypesense", mock.Anything, mock.Anything)
 				mockSrv.AssertExpectations(t)
 			}

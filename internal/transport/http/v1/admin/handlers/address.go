@@ -353,10 +353,6 @@ func (h *AddressHandler) SyncToTypesense(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	response := dto.SyncToTypesenseDTO{
-		Total:   output.Total,
-		Success: output.Success,
-		Failed:  output.Failed,
-	}
+	response := dto.SyncToTypesenseResponse{Data: dto.ToSyncToTypesenseDTO(output)}
 	c.JSON(http.StatusOK, response)
 }

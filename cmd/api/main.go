@@ -111,6 +111,9 @@ func main() {
 	adminMusicHandler := adminHandlers.NewMusicHandler(musicService, logger)
 	userMusicHandler := userHandlers.NewMusicHandler(musicService, logger)
 
+	// Typesense handler
+	adminTypesenseHandler := adminHandlers.NewTypesenseHandler(typesenseClient, logger)
+
 	// Setup routers
 	router := gin.Default()
 	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
@@ -130,17 +133,19 @@ func main() {
 	authMiddleware := middleware.AuthMiddleware(firebaseClient.Auth, logger)
 	admin.SetupAdminRouter(router_v1,
 		&admin.Handlers{
-			Address: adminAddressHandler,
-			Prompt:  promptHandler,
-			User:    adminUserDataHandler,
-			Music:   adminMusicHandler,
+			Address:   adminAddressHandler,
+			Prompt:    promptHandler,
+			User:      adminUserDataHandler,
+			Music:     adminMusicHandler,
+			Typesense: adminTypesenseHandler,
 		},
 		authMiddleware)
 
-	user.SetupUserRouter(router_v1, &user.Handlers{
-		Music: userMusicHandler,
-		User:  appUserDataHandler,
-	},
+	user.SetupUserRouter(router_v1,
+		&user.Handlers{
+			Music: userMusicHandler,
+			User:  appUserDataHandler,
+		},
 		authMiddleware)
 
 	port := getPort()
