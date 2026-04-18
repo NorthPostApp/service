@@ -7,10 +7,11 @@ import (
 )
 
 type Handlers struct {
-	Address *handlers.AddressHandler
-	Prompt  *handlers.PromptHandler
-	User    *handlers.UserHandler
-	Music   *handlers.MusicHandler
+	Address   *handlers.AddressHandler
+	Prompt    *handlers.PromptHandler
+	User      *handlers.UserHandler
+	Music     *handlers.MusicHandler
+	Typesense *handlers.TypesenseHandler
 }
 
 func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.HandlerFunc) {
@@ -43,6 +44,10 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.
 		signIn := admin.Group("/signin")
 		{
 			signIn.POST("", h.User.SignInAdminUser)
+		}
+		typesense := admin.Group("/typesense")
+		{
+			typesense.GET("/info", h.Typesense.GetSystemInfo)
 		}
 	}
 }

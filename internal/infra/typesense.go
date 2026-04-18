@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log/slog"
 	"north-post/service/internal/domain/v1/models"
+	"north-post/service/internal/transport/http/v1/utils"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/typesense/typesense-go/v4/typesense"
 	"github.com/typesense/typesense-go/v4/typesense/api"
@@ -22,6 +24,17 @@ const (
 type TypesenseClient struct {
 	Client *typesense.Client
 	logger *slog.Logger
+}
+
+type TypesenseSystemInfo struct {
+	Health                     bool
+	SystemCPUActivePercentage  float32
+	SystemDiskTotalBytes       int64
+	SystemDiskUsedBytes        int64
+	SystemMemoryTotalBytes     int64
+	SystemMemoryUsedBytes      int64
+	SystemNetworkSentBytes     int64
+	SystemNetworkReceivedBytes int64
 }
 
 func NewTypesenseClient(logger *slog.Logger) (*TypesenseClient, error) {
@@ -182,6 +195,9 @@ func (c *TypesenseClient) SearchAddresses(
 		SortBy:  pointer.String("updatedAt:desc"),
 		Page:    &page,
 		PerPage: &perPage,
+		// Turn on these two parameters when project go online
+		// UseCache: pointer.True(),
+		// CacheTtl: pointer.Int(60), // 60 seconds cache
 	}
 	if len(params.Tags) > 0 {
 		filterStr := fmt.Sprintf("tags:=[%s]", strings.Join(params.Tags, ","))
@@ -237,5 +253,51 @@ func (c *TypesenseClient) DeleteAddressData(
 			"error", err,
 		)
 	}
+}
 
+// Typesense cluster operations
+func (c *TypesenseClient) GetSystemInfo(ctx context.Context) (*TypesenseSystemInfo, error) {
+	health, err := c.Client.Health(ctx, 3*time.Second)
+	if err != nil {
+		c.logger.Error(
+			"failed to get Typesense system health",
+			"error", err,
+			"url", os.Getenv("TYPESENSE_URL"),
+		)
+		return nil, fmt.Errorf("failed to get Typesense system health: %w", err)
+	}
+	metricsCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	metrics, err := c.Client.Metrics().Retrieve(metricsCtx)
+	if err != nil {
+		c.logger.Error(
+			"failed to get Typesense system metrics",
+			"error", err,
+			"url", os.Getenv("TYPESENSE_URL"),
+		)
+		return nil, fmt.Errorf("failed to get Typesense system metrics: %w", err)
+	}
+	typesenseSystemInfo := &TypesenseSystemInfo{Health: health}
+	if v, ok := metrics["system_cpu_active_percentage"].(string); ok {
+		typesenseSystemInfo.SystemCPUActivePercentage = utils.StringToFloat32(v)
+	}
+	if v, ok := metrics["system_disk_total_bytes"].(string); ok {
+		typesenseSystemInfo.SystemDiskTotalBytes = utils.StringToInt64(v)
+	}
+	if v, ok := metrics["system_disk_used_bytes"].(string); ok {
+		typesenseSystemInfo.SystemDiskUsedBytes = utils.StringToInt64(v)
+	}
+	if v, ok := metrics["system_memory_total_bytes"].(string); ok {
+		typesenseSystemInfo.SystemMemoryTotalBytes = utils.StringToInt64(v)
+	}
+	if v, ok := metrics["system_memory_used_bytes"].(string); ok {
+		typesenseSystemInfo.SystemMemoryUsedBytes = utils.StringToInt64(v)
+	}
+	if v, ok := metrics["system_network_sent_bytes"].(string); ok {
+		typesenseSystemInfo.SystemNetworkSentBytes = utils.StringToInt64(v)
+	}
+	if v, ok := metrics["system_network_received_bytes"].(string); ok {
+		typesenseSystemInfo.SystemNetworkReceivedBytes = utils.StringToInt64(v)
+	}
+	return typesenseSystemInfo, nil
 }

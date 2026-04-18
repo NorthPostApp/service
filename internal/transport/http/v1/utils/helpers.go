@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"north-post/service/internal/domain/v1/models"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -44,4 +45,18 @@ func ValidateMusicFilename(c *gin.Context, genre string, track string, logger *s
 		return false
 	}
 	return true
+}
+
+func StringToFloat32(value string) float32 {
+	if f, err := strconv.ParseFloat(value, 32); err == nil {
+		return float32(f)
+	}
+	return float32(0)
+}
+
+func StringToInt64(value string) int64 {
+	if f, err := strconv.ParseFloat(value, 64); err == nil {
+		return int64(f)
+	}
+	return int64(0)
 }

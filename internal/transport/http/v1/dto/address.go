@@ -105,10 +105,15 @@ type TagsRecordDTO struct {
 type SyncToTypesenseRequest struct {
 	Language models.Language `json:"language" binding:"required"`
 }
+
 type SyncToTypesenseDTO struct {
 	Total   int `json:"total"`
 	Success int `json:"success"`
 	Failed  int `json:"failed"`
+}
+
+type SyncToTypesenseResponse struct {
+	Data SyncToTypesenseDTO `json:"data"`
 }
 
 func ToAddressDTO(addressItem models.AddressItem) AddressItemDTO {
@@ -156,6 +161,14 @@ func ToTagsRecordDTO(tagsRecord models.TagsRecord, language models.Language) Tag
 		Tags:        tagsRecord.Tags,
 		RefreshedAt: tagsRecord.RefreshedAt,
 		Language:    language,
+	}
+}
+
+func ToSyncToTypesenseDTO(output *services.SyncToTypesenseOutput) SyncToTypesenseDTO {
+	return SyncToTypesenseDTO{
+		Total:   output.Total,
+		Success: output.Success,
+		Failed:  output.Failed,
 	}
 }
 
