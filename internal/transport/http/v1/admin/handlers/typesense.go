@@ -26,11 +26,19 @@ func NewTypesenseHandler(client typesenseClient, logger *slog.Logger) *Typesense
 	}
 }
 
+// GetSystemInfo godoc
+// @Summary Get Typesense system info
+// @Description Returns health status and system metrics of the Typesense cluster
+// @Tags Admin Typesense
+// @Produce json
+// @Success 200 {object} dto.GetSystemInfoResponse
+// @Failure 500 {object} map[string]string
+// @Router /admin/typesense/info [get]
 func (h *TypesenseHandler) GetSystemInfo(c *gin.Context) {
 	systemInfo, err := h.client.GetSystemInfo(c.Request.Context())
 	if err != nil {
 		h.logger.Error("failed to get typesense system info", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	systemInfoDTO := dto.ToSystemInfoDTO(systemInfo)

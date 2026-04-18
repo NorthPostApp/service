@@ -334,7 +334,7 @@ func (h *AddressHandler) GetAllTags(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body dto.SyncToTypesenseRequest true "Request body"
-// @Success 200 {object} dto.SyncToTypesenseDTO
+// @Success 200 {object} dto.SyncToTypesenseResponse
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /admin/address/sync [post]

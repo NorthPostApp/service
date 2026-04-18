@@ -80,7 +80,7 @@ func TestTypesenseHandler_GetSystemInfo(t *testing.T) {
 				t,
 				tt.mockOutput.SystemCPUActivePercentage,
 				response.Data.SystemCPUActivePercentage)
-			mockClient.AssertExpectations(t)
 		}
+		mockClient.AssertExpectations(t)
 	}
 }

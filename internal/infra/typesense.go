@@ -266,7 +266,9 @@ func (c *TypesenseClient) GetSystemInfo(ctx context.Context) (*TypesenseSystemIn
 		)
 		return nil, fmt.Errorf("failed to get Typesense system health: %w", err)
 	}
-	metrics, err := c.Client.Metrics().Retrieve(ctx)
+	metricsCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	metrics, err := c.Client.Metrics().Retrieve(metricsCtx)
 	if err != nil {
 		c.logger.Error(
 			"failed to get Typesense system metrics",
