@@ -88,6 +88,7 @@ func main() {
 		logger)
 	addressService := services.NewAddressService(addressRepo, llmClient)
 	adminAddressHandler := adminHandlers.NewAddressHandler(addressService, logger)
+	userAddressHandler := userHandlers.NewAddressHandler(addressService, logger)
 
 	// Prompt service
 	promptRepo := repository.NewPromptRepository(firebaseClient.Firestore, logger)
@@ -143,8 +144,9 @@ func main() {
 
 	user.SetupUserRouter(router_v1,
 		&user.Handlers{
-			Music: userMusicHandler,
-			User:  appUserDataHandler,
+			Music:   userMusicHandler,
+			User:    appUserDataHandler,
+			Address: userAddressHandler,
 		},
 		authMiddleware)
 
