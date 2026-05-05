@@ -41,7 +41,7 @@ func NewAddressHandler(service addressService, logger *slog.Logger) *AddressHand
 // @Success 200 {object} dto.GetAllTagsResponse
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /admin/address/tags [get]
+// @Router /user/address/tags [get]
 func (h *AddressHandler) GetAllTags(c *gin.Context) {
 	languageStr := strings.TrimSpace(c.Query("language"))
 	language := models.Language(languageStr)

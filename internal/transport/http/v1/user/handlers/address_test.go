@@ -62,20 +62,20 @@ func TestGetAllTags(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name:           "invalid language",
-			language:       "EN",
-			url:            "/user/address/tags?language=abs",
-			mockOutput:     nil,
-			mockError:      errors.New("failed request"),
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "invalid language",
+			name:           "service returns error",
 			language:       "ZH",
 			url:            "/user/address/tags?language=zH",
 			mockOutput:     nil,
 			mockError:      errors.New("failed request"),
 			expectedStatus: http.StatusInternalServerError,
+		},
+		{
+			name:           "invalid language",
+			language:       "EN",
+			url:            "/user/address/tags?language=abs",
+			mockOutput:     nil,
+			mockError:      nil,
+			expectedStatus: http.StatusBadRequest,
 		},
 	}
 
@@ -87,7 +87,7 @@ func TestGetAllTags(t *testing.T) {
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 			assert.Equal(t, tt.expectedStatus, w.Code)
-			if tt.mockError == nil {
+			if tt.mockError == nil && tt.mockOutput != nil {
 				var response dto.GetAllTagsResponse
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				assert.NoError(t, err)
