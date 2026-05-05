@@ -275,14 +275,14 @@ func (h *AddressHandler) GenerateNewAddress(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// RefreshTags godoc
-// @Summary Refresh tag categories
+// GetAllTags godoc
+// @Summary Get or refresh address tags
 // @Description Scans all addresses in the specified language and refreshes the tag collection with unique tags from all categories (country, role, figure)
 // @Tags Admin Address
 // @Accept json
 // @Produce json
 // @Param language query string true "Language code (e.g., en, zh)"
-// @Success 200 {object} dto.RefreshTagsResponse
+// @Success 200 {object} dto.GetAllTagsResponse
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /admin/address/tags [get]

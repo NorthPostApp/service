@@ -7,8 +7,9 @@ import (
 )
 
 type Handlers struct {
-	Music *handlers.MusicHandler
-	User  *handlers.UserHandler
+	Music   *handlers.MusicHandler
+	User    *handlers.UserHandler
+	Address *handlers.AddressHandler
 }
 
 func SetupUserRouter(router *gin.RouterGroup, h *Handlers, userMiddleware gin.HandlerFunc) {
@@ -22,6 +23,10 @@ func SetupUserRouter(router *gin.RouterGroup, h *Handlers, userMiddleware gin.Ha
 		signIn := user.Group("/signin")
 		{
 			signIn.POST("", h.User.AuthenticateAppUser)
+		}
+		address := user.Group("/address")
+		{
+			address.GET("/tags", h.Address.GetAllTags)
 		}
 	}
 }
