@@ -1,6 +1,7 @@
 package user
 
 import (
+	"north-post/service/internal/transport/http/v1/middleware"
 	"north-post/service/internal/transport/http/v1/user/handlers"
 
 	"github.com/gin-gonic/gin"
@@ -12,8 +13,8 @@ type Handlers struct {
 	Address *handlers.AddressHandler
 }
 
-func SetupUserRouter(router *gin.RouterGroup, h *Handlers, userMiddleware gin.HandlerFunc) {
-	user := router.Group("/user", userMiddleware)
+func SetupUserRouter(router *gin.RouterGroup, h *Handlers, middlewares *middleware.Middlewares) {
+	user := router.Group("/user", middlewares.Auth)
 	{
 		music := user.Group("/music")
 		{

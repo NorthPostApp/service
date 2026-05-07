@@ -124,14 +124,14 @@ func main() {
 	}
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     origins,
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
 	router_v1 := router.Group("/v1")
 
-	authMiddleware := middleware.AuthMiddleware(firebaseClient.Auth, logger)
+	middlewares := middleware.SetupMiddlewares(firebaseClient.Auth, logger)
 	admin.SetupAdminRouter(router_v1,
 		&admin.Handlers{
 			Address:   adminAddressHandler,
@@ -140,7 +140,7 @@ func main() {
 			Music:     adminMusicHandler,
 			Typesense: adminTypesenseHandler,
 		},
-		authMiddleware)
+		middlewares)
 
 	user.SetupUserRouter(router_v1,
 		&user.Handlers{
@@ -148,7 +148,7 @@ func main() {
 			User:    appUserDataHandler,
 			Address: userAddressHandler,
 		},
-		authMiddleware)
+		middlewares)
 
 	port := getPort()
 	logger.Info("starting server", "port", port)
