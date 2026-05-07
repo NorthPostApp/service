@@ -122,7 +122,7 @@ func TestLanguageFromBodyMiddleware(t *testing.T) {
 			expectedValue: "",
 			status:        http.StatusBadRequest,
 			abort:         true,
-			errorMessage:  "language is required",
+			errorMessage:  "failed to bind",
 		},
 		{
 			name:          "invalid language",

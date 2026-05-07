@@ -131,7 +131,7 @@ func main() {
 	}))
 	router_v1 := router.Group("/v1")
 
-	middlewares := middleware.SetupMiddleswares(firebaseClient.Auth, logger)
+	middlewares := middleware.SetupMiddlewares(firebaseClient.Auth, logger)
 	admin.SetupAdminRouter(router_v1,
 		&admin.Handlers{
 			Address:   adminAddressHandler,

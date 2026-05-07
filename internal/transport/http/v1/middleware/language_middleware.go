@@ -38,8 +38,8 @@ func LanguageFromBodyMiddleware(logger *slog.Logger) gin.HandlerFunc {
 			Language models.Language `json:"language"`
 		}
 		if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
-			logger.Error("language is required")
-			c.JSON(http.StatusBadRequest, gin.H{"error": "language is required"})
+			logger.Error("failed to bind language body", "error", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 			c.Abort()
 			return
 		}

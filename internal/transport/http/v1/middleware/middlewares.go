@@ -12,7 +12,7 @@ type Middlewares struct {
 	Auth              gin.HandlerFunc
 }
 
-func SetupMiddleswares(auth authClient, logger *slog.Logger) *Middlewares {
+func SetupMiddlewares(auth authClient, logger *slog.Logger) *Middlewares {
 	return &Middlewares{
 		LanguageFromQuery: LanguageFromQueryMiddleware(logger),
 		LanguageFromBody:  LanguageFromBodyMiddleware(logger),
