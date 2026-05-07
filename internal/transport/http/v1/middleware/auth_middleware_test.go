@@ -30,7 +30,7 @@ func (m *MockAuthClient) VerifyIDToken(c context.Context, idToken string) (*auth
 	return m.VerifyIDTokenFn(c, idToken)
 }
 
-func setupTestContext(authHeader string, mockAuth *MockAuthClient) (
+func setupAuthTestContext(authHeader string, mockAuth *MockAuthClient) (
 	*gin.Context,
 	*httptest.ResponseRecorder,
 	*bytes.Buffer,
@@ -58,7 +58,7 @@ func teardownTest() {
 
 func TestAdminAuthMiddleware_MissingAuthorizationHeader(t *testing.T) {
 	mockAuth := &MockAuthClient{}
-	c, w, logBuffer, middleware := setupTestContext("", mockAuth)
+	c, w, logBuffer, middleware := setupAuthTestContext("", mockAuth)
 	defer teardownTest()
 	middleware(c)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -74,7 +74,7 @@ func TestAdminAuthMiddleware_MissingAuthorizationHeader(t *testing.T) {
 
 func TestAdminAuthMiddleware_InvalidFormat_NoBearerPrefix(t *testing.T) {
 	mockAuth := &MockAuthClient{}
-	c, w, logBuffer, middleware := setupTestContext("InvalidToken123", mockAuth)
+	c, w, logBuffer, middleware := setupAuthTestContext("InvalidToken123", mockAuth)
 	defer teardownTest()
 	middleware(c)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -89,7 +89,7 @@ func TestAdminAuthMiddleware_InvalidFormat_NoBearerPrefix(t *testing.T) {
 
 func TestAdminAuthMiddleware_InvalidHeader(t *testing.T) {
 	mockAuth := &MockAuthClient{}
-	c, w, logBuffer, middleware := setupTestContext("Basic token123", mockAuth)
+	c, w, logBuffer, middleware := setupAuthTestContext("Basic token123", mockAuth)
 	defer teardownTest()
 	middleware(c)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -113,7 +113,7 @@ func TestAdminAuthMiddleware_ValidFormat(t *testing.T) {
 			}, nil
 		},
 	}
-	c, w, logBuffer, middleware := setupTestContext("Bearer valid_token", mockAuth)
+	c, w, logBuffer, middleware := setupAuthTestContext("Bearer valid_token", mockAuth)
 	defer teardownTest()
 	middleware(c)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -129,7 +129,7 @@ func TestAdminAuthMiddleware_Unauthorized(t *testing.T) {
 			return nil, errors.New("Unauthorized")
 		},
 	}
-	c, w, logBuffer, middleware := setupTestContext("Bearer valid_token", mockAuth)
+	c, w, logBuffer, middleware := setupAuthTestContext("Bearer valid_token", mockAuth)
 	defer teardownTest()
 	middleware(c)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)

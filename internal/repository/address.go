@@ -324,6 +324,10 @@ func (r *AddressRepository) GetAllTags(ctx context.Context, opts GetAllTagsOptio
 		r.logger.Error("failed to parse tags record", "error", err)
 		return nil, fmt.Errorf("failed to parse tags record: %w", err)
 	}
+	// sort the record
+	for k := range tagsRecord.Tags {
+		slices.Sort(tagsRecord.Tags[k])
+	}
 	return &tagsRecord, nil
 }
 

@@ -2,6 +2,7 @@ package admin
 
 import (
 	"north-post/service/internal/transport/http/v1/admin/handlers"
+	"north-post/service/internal/transport/http/v1/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,8 +15,8 @@ type Handlers struct {
 	Typesense *handlers.TypesenseHandler
 }
 
-func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, adminMiddleware gin.HandlerFunc) {
-	admin := router.Group("/admin", adminMiddleware)
+func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, middlewares *middleware.Middlewares) {
+	admin := router.Group("/admin", middlewares.Auth)
 	{
 		address := admin.Group("/address")
 		{
