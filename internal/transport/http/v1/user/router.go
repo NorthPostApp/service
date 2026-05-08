@@ -27,7 +27,9 @@ func SetupUserRouter(router *gin.RouterGroup, h *Handlers, middlewares *middlewa
 		}
 		address := user.Group("/address")
 		{
+			address.POST("", middlewares.LanguageFromBody, h.Address.GetAddresses)
 			address.GET("/tags", middlewares.LanguageFromQuery, h.Address.GetAllTags)
+
 		}
 	}
 }
