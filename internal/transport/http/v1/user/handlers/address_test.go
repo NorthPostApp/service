@@ -91,7 +91,6 @@ func TestGetAllTags(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockSrv.On("GetAllTags", mock.Anything, mock.Anything).
@@ -113,6 +112,7 @@ func TestGetAllTags(t *testing.T) {
 }
 
 func TestGetAddresses(t *testing.T) {
+	t.Parallel()
 	mockSrv := new(MockAddressService)
 	handler := NewAddressHandler(mockSrv, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	router := setupRouter(handler)
@@ -151,31 +151,34 @@ func TestGetAddresses(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		if tt.mockOutput != nil || tt.mockError != nil {
-			mockSrv.On("GetAddresses", mock.Anything, mock.Anything).
-				Return(tt.mockOutput, tt.mockError).Once()
-		}
-		req, _ := http.NewRequest("POST", "/user/address", bytes.NewBufferString(tt.body))
-		req.Header.Set("Content-Type", "application/json")
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-		assert.Equal(t, tt.expectedStatus, w.Code)
-		if tt.mockOutput != nil || tt.mockError != nil {
-			mockSrv.AssertExpectations(t)
-		}
-		if tt.mockOutput != nil {
-			var response dto.GetAddressesResponse
-			err := json.Unmarshal(w.Body.Bytes(), &response)
-			assert.NoError(t, err)
-			assert.Equal(t, len(tt.mockOutput.Addresses), len(response.Data.Addresses))
-			assert.Equal(t, tt.mockOutput.Addresses[0].ID, response.Data.Addresses[0].ID)
-		} else if tt.mockError != nil {
-			var response struct {
-				Error string `json:"error"`
+		t.Run(tt.name, func(t *testing.T) {
+
+			if tt.mockOutput != nil || tt.mockError != nil {
+				mockSrv.On("GetAddresses", mock.Anything, mock.Anything).
+					Return(tt.mockOutput, tt.mockError).Once()
 			}
-			err := json.Unmarshal(w.Body.Bytes(), &response)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.mockError.Error(), response.Error)
-		}
+			req, _ := http.NewRequest("POST", "/user/address", bytes.NewBufferString(tt.body))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.mockOutput != nil || tt.mockError != nil {
+				mockSrv.AssertExpectations(t)
+			}
+			if tt.mockOutput != nil {
+				var response dto.GetAddressesResponse
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, len(tt.mockOutput.Addresses), len(response.Data.Addresses))
+				assert.Equal(t, tt.mockOutput.Addresses[0].ID, response.Data.Addresses[0].ID)
+			} else if tt.mockError != nil {
+				var response struct {
+					Error string `json:"error"`
+				}
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.NotEqual(t, tt.mockError.Error(), response.Error) // should hide system error
+			}
+		})
 	}
 }

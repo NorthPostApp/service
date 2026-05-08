@@ -51,7 +51,7 @@ func (h *AddressHandler) GetAllTags(c *gin.Context) {
 	output, err := h.service.GetAllTags(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to get all tags", "language", language, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get all tags"})
 		return
 	}
 	response := dto.GetAllTagsResponse{Data: dto.ToTagsRecordDTO(output.TagsRecord, language)}
@@ -84,7 +84,7 @@ func (h *AddressHandler) GetAddresses(c *gin.Context) {
 	output, err := h.service.GetAddresses(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to get addresses", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get addresses"})
 		return
 	}
 	response := dto.GetAddressesResponse{
