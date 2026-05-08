@@ -8,6 +8,7 @@ import (
 	"north-post/service/internal/services"
 	"north-post/service/internal/transport/http/v1/dto"
 	"north-post/service/internal/transport/http/v1/middleware"
+	"north-post/service/internal/transport/http/v1/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,6 +16,9 @@ import (
 type addressService interface {
 	GetAllTags(ctx context.Context, input services.GetAllTagsInput) (
 		*services.GetAllTagsOutput, error,
+	)
+	GetAddresses(ctx context.Context, input services.GetAddressesInput) (
+		*services.GetAddressesOutput, error,
 	)
 }
 
@@ -51,5 +55,40 @@ func (h *AddressHandler) GetAllTags(c *gin.Context) {
 		return
 	}
 	response := dto.GetAllTagsResponse{Data: dto.ToTagsRecordDTO(output.TagsRecord, language)}
+	c.JSON(http.StatusOK, response)
+}
+
+// GetAddresses godoc
+// @Summary Get addresses
+// @Description Search and return addresses by language, keywords, tags, and pagination
+// @Tags User Address
+// @Accept json
+// @Produce json
+// @Param request body dto.GetAddressesRequest true "Get addresses request"
+// @Success 200 {object} dto.GetAddressesResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /user/address [post]
+func (h *AddressHandler) GetAddresses(c *gin.Context) {
+	var req dto.GetAddressesRequest
+	if !utils.BindJSON(c, &req, h.logger) {
+		return
+	}
+	input := services.GetAddressesInput{
+		Language: req.Language,
+		Keywords: req.Keywords,
+		Tags:     req.Tags,
+		PageSize: req.PageSize,
+		Page:     req.Page,
+	}
+	output, err := h.service.GetAddresses(c.Request.Context(), input)
+	if err != nil {
+		h.logger.Error("failed to get addresses", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	response := dto.GetAddressesResponse{
+		Data: dto.ToGetAddressesResponseDTO(output, req.Language),
+	}
 	c.JSON(http.StatusOK, response)
 }

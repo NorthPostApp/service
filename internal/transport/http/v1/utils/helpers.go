@@ -8,10 +8,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 func BindJSON(c *gin.Context, req interface{}, logger *slog.Logger) bool {
-	if err := c.ShouldBindJSON(req); err != nil {
+	if err := c.ShouldBindBodyWith(req, binding.JSON); err != nil {
 		logger.Error("invalid request body", "error", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return false
