@@ -26,5 +26,5 @@ func (l Language) Get() string {
 }
 
 func (l Language) Lower() Language {
-	return Language(strings.ToLower(string(l)))
+	return Language(l.Get())
 }
