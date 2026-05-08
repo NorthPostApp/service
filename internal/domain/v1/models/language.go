@@ -7,18 +7,13 @@ import (
 
 type Language string
 
-var SupportedLanguages = []Language{
-	"ZH",
-	"EN",
-}
-
 const (
-	LanguageZH Language = "ZH"
-	LanguageEN Language = "EN"
+	LanguageZH Language = "zh"
+	LanguageEN Language = "en"
 )
 
 func (l Language) Validate() error {
-	switch l.Upper() {
+	switch l.Lower() {
 	case LanguageZH, LanguageEN:
 		return nil
 	default:
@@ -30,6 +25,6 @@ func (l Language) Get() string {
 	return strings.ToLower(string(l))
 }
 
-func (l Language) Upper() Language {
-	return Language(strings.ToUpper(string(l)))
+func (l Language) Lower() Language {
+	return Language(l.Get())
 }

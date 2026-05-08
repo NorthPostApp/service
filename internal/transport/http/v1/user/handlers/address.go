@@ -7,8 +7,7 @@ import (
 	"north-post/service/internal/domain/v1/models"
 	"north-post/service/internal/services"
 	"north-post/service/internal/transport/http/v1/dto"
-	"north-post/service/internal/transport/http/v1/utils"
-	"strings"
+	"north-post/service/internal/transport/http/v1/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -43,11 +42,7 @@ func NewAddressHandler(service addressService, logger *slog.Logger) *AddressHand
 // @Failure 500 {object} map[string]string
 // @Router /user/address/tags [get]
 func (h *AddressHandler) GetAllTags(c *gin.Context) {
-	languageStr := strings.TrimSpace(c.Query("language"))
-	language := models.Language(languageStr)
-	if !utils.ValidateLanguage(c, language, h.logger) {
-		return
-	}
+	language := models.Language(c.GetString(middleware.LanguageKey))
 	input := services.GetAllTagsInput{Language: language}
 	output, err := h.service.GetAllTags(c.Request.Context(), input)
 	if err != nil {

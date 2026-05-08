@@ -27,7 +27,7 @@ func SetupUserRouter(router *gin.RouterGroup, h *Handlers, middlewares *middlewa
 		}
 		address := user.Group("/address")
 		{
-			address.GET("/tags", h.Address.GetAllTags)
+			address.GET("/tags", middlewares.LanguageFromQuery, h.Address.GetAllTags)
 		}
 	}
 }

@@ -5,11 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"firebase.google.com/go/v4/auth"
@@ -52,14 +50,9 @@ func setupAuthTestContext(authHeader string, mockAuth *MockAuthClient) (
 	return c, w, &logBuffer, middleware
 }
 
-func teardownTest() {
-	log.SetOutput(os.Stderr)
-}
-
 func TestAdminAuthMiddleware_MissingAuthorizationHeader(t *testing.T) {
 	mockAuth := &MockAuthClient{}
 	c, w, logBuffer, middleware := setupAuthTestContext("", mockAuth)
-	defer teardownTest()
 	middleware(c)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.True(t, c.IsAborted())
@@ -75,7 +68,6 @@ func TestAdminAuthMiddleware_MissingAuthorizationHeader(t *testing.T) {
 func TestAdminAuthMiddleware_InvalidFormat_NoBearerPrefix(t *testing.T) {
 	mockAuth := &MockAuthClient{}
 	c, w, logBuffer, middleware := setupAuthTestContext("InvalidToken123", mockAuth)
-	defer teardownTest()
 	middleware(c)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.True(t, c.IsAborted())
@@ -90,7 +82,6 @@ func TestAdminAuthMiddleware_InvalidFormat_NoBearerPrefix(t *testing.T) {
 func TestAdminAuthMiddleware_InvalidHeader(t *testing.T) {
 	mockAuth := &MockAuthClient{}
 	c, w, logBuffer, middleware := setupAuthTestContext("Basic token123", mockAuth)
-	defer teardownTest()
 	middleware(c)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.True(t, c.IsAborted())
@@ -114,7 +105,6 @@ func TestAdminAuthMiddleware_ValidFormat(t *testing.T) {
 		},
 	}
 	c, w, logBuffer, middleware := setupAuthTestContext("Bearer valid_token", mockAuth)
-	defer teardownTest()
 	middleware(c)
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.False(t, c.IsAborted())
@@ -130,7 +120,6 @@ func TestAdminAuthMiddleware_Unauthorized(t *testing.T) {
 		},
 	}
 	c, w, logBuffer, middleware := setupAuthTestContext("Bearer valid_token", mockAuth)
-	defer teardownTest()
 	middleware(c)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.True(t, c.IsAborted())
