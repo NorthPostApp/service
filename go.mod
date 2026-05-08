@@ -14,7 +14,7 @@ require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/openai/openai-go/v3 v3.15.0
+	github.com/openai/openai-go/v3 v3.35.0
 	github.com/stretchr/testify v1.11.1
 	github.com/typesense/typesense-go/v4 v4.0.0-alpha2
 	google.golang.org/api v0.256.0
