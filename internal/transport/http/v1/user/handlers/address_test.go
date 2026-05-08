@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"north-post/service/internal/domain/v1/models"
 	"north-post/service/internal/services"
 	"north-post/service/internal/transport/http/v1/dto"
+	"north-post/service/internal/transport/http/v1/middleware"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -31,7 +33,8 @@ func (m *MockAddressService) GetAllTags(
 func setupRouter(handler *AddressHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
-	r.GET("/user/address/tags", handler.GetAllTags)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	r.GET("/user/address/tags", middleware.LanguageFromQueryMiddleware(logger), handler.GetAllTags)
 	return r
 }
 

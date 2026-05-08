@@ -87,7 +87,6 @@ func TestLanguageFromQueryMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c, w, logBuffer := setupLanguageFromQueryTestContext(tt.query)
-			defer teardownTest()
 			logOutput := logBuffer.String()
 			assert.Equal(t, tt.status, w.Code)
 			assert.Equal(t, tt.abort, c.IsAborted())
@@ -137,7 +136,6 @@ func TestLanguageFromBodyMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c, w, logBuffer := setupLanguageFromBodyTestContext(tt.body)
-			defer teardownTest()
 			logOutput := logBuffer.String()
 			assert.Equal(t, tt.status, w.Code)
 			assert.Equal(t, tt.abort, c.IsAborted())
