@@ -34,6 +34,8 @@ type GetUserByIdOptions struct {
 	Uid string
 }
 
+/* ---- Admin user repository ---- */
+
 func (u *UserRepository) SignInAdminUserById(ctx context.Context, opts GetUserByIdOptions) (*models.AdminUser, error) {
 	tableName := adminUserTable
 	docRef := u.client.Firestore.Collection(tableName).Doc(opts.Uid)
@@ -60,6 +62,8 @@ func (u *UserRepository) SignInAdminUserById(ctx context.Context, opts GetUserBy
 	}
 	return &adminUser, nil
 }
+
+/* ---- App user repository ---- */
 
 func (u *UserRepository) AuthenticateAppUserById(
 	ctx context.Context,
@@ -121,6 +125,52 @@ func (u *UserRepository) CreateAppUser(
 		ImageUrl:    userRecord.PhotoURL,
 		LikedMusics: []string{},
 		Drafts:      []string{},
+		AddressBook: &models.AddressBook{
+			SavedAddresses: []string{},
+		},
 	}
 	return newUser, nil
+}
+
+/* ---- User Address Book ---- */
+
+type UpdateSavedAddressesAction int
+
+const (
+	Add UpdateSavedAddressesAction = iota
+	Delete
+)
+
+type UpdateUserSavedAddressesOptions struct {
+	UserID    string
+	AddressID string
+	Action    UpdateSavedAddressesAction
+}
+
+func (u *UserRepository) UpdateUserSavedAddresses(
+	ctx context.Context,
+	opts *UpdateUserSavedAddressesOptions,
+) (string, error) {
+	tableName := appUserTable
+	docRef := u.client.Firestore.Collection(tableName).Doc(opts.UserID)
+	var updateValue any
+	switch opts.Action {
+	case Add:
+		updateValue = firestore.ArrayUnion(opts.AddressID)
+	case Delete:
+		updateValue = firestore.ArrayRemove(opts.AddressID)
+	default:
+		return "", fmt.Errorf("unsupported update action")
+	}
+	_, err := docRef.Update(ctx, []firestore.Update{
+		{Path: "addressBook.savedAddresses", Value: updateValue},
+	})
+	if err != nil {
+		u.logger.Error(
+			"failed to update saved addresses",
+			"uid", opts.UserID,
+			"error", err)
+		return "", fmt.Errorf("failed to update saved addresses: %w", err)
+	}
+	return opts.AddressID, nil
 }

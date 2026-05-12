@@ -99,7 +99,7 @@ func main() {
 	userRepo := repository.NewUserRepository(firebaseClient, logger)
 	userService := services.NewUserService(userRepo)
 	adminUserDataHandler := adminHandlers.NewUserHandler(userService, logger)
-	appUserDataHandler := userHandlers.NewUserHandler(userService, logger)
+	appUserDataHandler := userHandlers.NewUserHandler(userRepo, logger)
 
 	// Music service
 	musicRepo := repository.NewMusicRepository(
@@ -124,7 +124,7 @@ func main() {
 	}
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     origins,
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
