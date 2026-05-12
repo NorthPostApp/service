@@ -142,13 +142,13 @@ func main() {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
+	// Swagger UI — only expose in non-production
 	if env != "production" {
 		router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 		swaggerURL := fmt.Sprintf("http://localhost:%s/swagger/index.html", getPort())
 		logger.Info("swagger UI enabled", "url", swaggerURL)
 	}
 	router_v1 := router.Group("/v1")
-	// Swagger UI — only expose in non-production
 
 	middlewares := middleware.SetupMiddlewares(firebaseClient.Auth, logger)
 	admin.SetupAdminRouter(router_v1,
