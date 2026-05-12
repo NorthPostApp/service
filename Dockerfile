@@ -1,4 +1,4 @@
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 
@@ -12,10 +12,14 @@ COPY go.sum ./
 # Download dependencies
 RUN go mod download
 
+# Install swag CLI
+RUN go install github.com/swaggo/swag/cmd/swag@latest
+
 # Copy the rest of the source code
 COPY . .
 
-# Build the Go app for Linux AMD64
+# Generate swagger docs then build
+RUN swag init -g cmd/api/main.go --output docs
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main ./cmd/api
 
 # Final image

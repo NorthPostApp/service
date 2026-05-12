@@ -45,7 +45,7 @@ func NewAddressHandler(service addressService, logger *slog.Logger) *AddressHand
 // @Accept json
 // @Produce json
 // @Param request body dto.GetAddressesRequest true "Request body"
-// @Success 200 {object} dto.GetAddressResponse
+// @Success 200 {object} dto.GetAddressesResponse
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Router /admin/address [post]

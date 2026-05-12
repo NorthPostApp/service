@@ -32,6 +32,9 @@ gin-bin
 /bin/
 /dist/
 /build/
+docs/swagger.json
+docs/swagger.yaml
+docs/docs.go
 
 # Docker
 docker-compose.yml
