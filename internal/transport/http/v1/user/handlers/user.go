@@ -119,7 +119,9 @@ func (h *UserHandler) convertUpdateMethod(action string) repository.UpdateSavedA
 	switch action {
 	case "add":
 		return repository.Add
-	default:
+	case "delete", "remove":
 		return repository.Delete
+	default:
+		return -1
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"north-post/service/internal/domain/v1/models"
 	"north-post/service/internal/infra"
-	"slices"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -15,9 +14,8 @@ import (
 )
 
 const (
-	adminUserTable        = "admin_users"
-	appUserTable          = "app_users"
-	addressBookCollection = "addressBook"
+	adminUserTable = "admin_users"
+	appUserTable   = "app_users"
 )
 
 type UserRepository struct {
@@ -155,39 +153,17 @@ func (u *UserRepository) UpdateUserSavedAddresses(
 ) (string, error) {
 	tableName := appUserTable
 	docRef := u.client.Firestore.Collection(tableName).Doc(opts.UserID)
-	doc, err := docRef.Get(ctx)
-	if err != nil {
-		u.logger.Error("failed to get app user document", "uid", opts.UserID, "error", err)
-		return "", fmt.Errorf("failed to get app user with UID: %w", err)
-	}
-	var appUser models.AppUser
-	if err := doc.DataTo(&appUser); err != nil {
-		u.logger.Error("failed to parse app user document", "uid", opts.UserID, "error", err)
-		return "", fmt.Errorf("failed to parse app user data: %w", err)
-	}
-	if appUser.AddressBook == nil {
-		backfillAddressBook(&appUser)
-	}
-	savedAddresses := appUser.AddressBook.SavedAddresses
-	addressExists := slices.Contains(
-		savedAddresses,
-		opts.AddressID)
+	var updateValue any
 	switch opts.Action {
 	case Add:
-		if !addressExists {
-			savedAddresses = append(savedAddresses, opts.AddressID)
-		}
+		updateValue = firestore.ArrayUnion(opts.AddressID)
 	case Delete:
-		if addressExists {
-			savedAddresses = slices.DeleteFunc(
-				savedAddresses,
-				func(id string) bool {
-					return id == opts.AddressID
-				})
-		}
+		updateValue = firestore.ArrayRemove(opts.AddressID)
+	default:
+		return "", fmt.Errorf("unsupported update action")
 	}
-	_, err = docRef.Update(ctx, []firestore.Update{
-		{Path: "addressBook.savedAddresses", Value: savedAddresses},
+	_, err := docRef.Update(ctx, []firestore.Update{
+		{Path: "addressBook.savedAddresses", Value: updateValue},
 	})
 	if err != nil {
 		u.logger.Error(
@@ -197,11 +173,4 @@ func (u *UserRepository) UpdateUserSavedAddresses(
 		return "", fmt.Errorf("failed to update saved addresses: %w", err)
 	}
 	return opts.AddressID, nil
-}
-
-// helper functions
-func backfillAddressBook(appUser *models.AppUser) {
-	appUser.AddressBook = &models.AddressBook{
-		SavedAddresses: []string{},
-	}
 }
