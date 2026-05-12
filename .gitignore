@@ -32,6 +32,7 @@ gin-bin
 /bin/
 /dist/
 /build/
+docs/
 
 # Docker
 docker-compose.yml

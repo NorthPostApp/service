@@ -19,6 +19,11 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
+	_ "north-post/service/docs"
 )
 
 var PORT_NUMBER = 8080
@@ -31,6 +36,14 @@ func getPort() string {
 	return port
 }
 
+// @title           North Post API
+// @version         1.0
+// @description     North Post backend service API.
+// @host            localhost:8080
+// @BasePath        /v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	// Initialize logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -129,7 +142,13 @@ func main() {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
+	if env != "production" {
+		router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		swaggerURL := fmt.Sprintf("http://localhost:%s/swagger/index.html", getPort())
+		logger.Info("swagger UI enabled", "url", swaggerURL)
+	}
 	router_v1 := router.Group("/v1")
+	// Swagger UI — only expose in non-production
 
 	middlewares := middleware.SetupMiddlewares(firebaseClient.Auth, logger)
 	admin.SetupAdminRouter(router_v1,

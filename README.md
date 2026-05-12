@@ -1,16 +1,26 @@
-# NorthPost Service
+# CRUD Service for the NorthPost
 
 [![CI](https://github.com/NorthPostApp/service/actions/workflows/ci.yml/badge.svg)](https://github.com/NorthPostApp/service/actions/workflows/ci.yml)
 
-Backend service for north post app
+## Gin Swagger Documentation
 
-docker build -t north-post-dev:1.0.0 .
+1. Install swagger globally
+```
+go install github.com/swaggo/swag/cmd/swag@latest
+```
+2. Run command from the root dit to generate swagger doc
+```
+swag init -g cmd/api/main.go --output docs
+```
+Once running, visit `http://localhost:<PORT>/swagger/index.html` to see the UI.
 
-docker run -p 8080:8080 north-post-dev
+3. Add the following step to the CI/CD workflow:
+```
+- name: Generate Swagger docs
+  run: |
+    go install github.com/swaggo/swag/cmd/swag@latest
+    swag init -g cmd/api/main.go --output docs
+```
 
-docker-compose build north-post-admin
-
-docker-compose up north-post-admin
-
-### Some design rules
-1. Do input validation at **service** layer;
+**Troubleshoot**
+- `zsh: command not found: swag`: run this command `echo 'export PATH=$PATH:$(go env GOPATH)/bin' >> ~/.zshrc && source ~/.zshrc`
