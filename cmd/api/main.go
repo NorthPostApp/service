@@ -99,7 +99,7 @@ func main() {
 	userRepo := repository.NewUserRepository(firebaseClient, logger)
 	userService := services.NewUserService(userRepo)
 	adminUserDataHandler := adminHandlers.NewUserHandler(userService, logger)
-	appUserDataHandler := userHandlers.NewUserHandler(userService, logger)
+	appUserDataHandler := userHandlers.NewUserHandler(userRepo, logger)
 
 	// Music service
 	musicRepo := repository.NewMusicRepository(

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"north-post/service/internal/domain/v1/models"
 	"north-post/service/internal/infra"
+	"slices"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -14,8 +15,9 @@ import (
 )
 
 const (
-	adminUserTable = "admin_users"
-	appUserTable   = "app_users"
+	adminUserTable        = "admin_users"
+	appUserTable          = "app_users"
+	addressBookCollection = "addressBook"
 )
 
 type UserRepository struct {
@@ -33,6 +35,8 @@ func NewUserRepository(client *infra.FirebaseClient, logger *slog.Logger) *UserR
 type GetUserByIdOptions struct {
 	Uid string
 }
+
+/* ---- Admin user repository ---- */
 
 func (u *UserRepository) SignInAdminUserById(ctx context.Context, opts GetUserByIdOptions) (*models.AdminUser, error) {
 	tableName := adminUserTable
@@ -60,6 +64,8 @@ func (u *UserRepository) SignInAdminUserById(ctx context.Context, opts GetUserBy
 	}
 	return &adminUser, nil
 }
+
+/* ---- App user repository ---- */
 
 func (u *UserRepository) AuthenticateAppUserById(
 	ctx context.Context,
@@ -121,6 +127,81 @@ func (u *UserRepository) CreateAppUser(
 		ImageUrl:    userRecord.PhotoURL,
 		LikedMusics: []string{},
 		Drafts:      []string{},
+		AddressBook: &models.AddressBook{
+			SavedAddresses: []string{},
+		},
 	}
 	return newUser, nil
+}
+
+/* ---- User Address Book ---- */
+
+type UpdateSavedAddressesActon int
+
+const (
+	Add UpdateSavedAddressesActon = iota
+	Delete
+)
+
+type UpdateUserSavedAddressesOptions struct {
+	UserID    string
+	AddressID string
+	Action    UpdateSavedAddressesActon
+}
+
+func (u *UserRepository) UpdateUserSavedAddresses(
+	ctx context.Context,
+	opts *UpdateUserSavedAddressesOptions,
+) (string, error) {
+	tableName := appUserTable
+	docRef := u.client.Firestore.Collection(tableName).Doc(opts.UserID)
+	doc, err := docRef.Get(ctx)
+	if err != nil {
+		u.logger.Error("failed to get app user document", "uid", opts.UserID, "error", err)
+		return "", fmt.Errorf("failed to get app user with UID: %w", err)
+	}
+	var appUser models.AppUser
+	if err := doc.DataTo(&appUser); err != nil {
+		u.logger.Error("failed to parse app user document", "uid", opts.UserID, "error", err)
+		return "", fmt.Errorf("failed to parse app user data: %w", err)
+	}
+	if appUser.AddressBook == nil {
+		backfillAddressBook(&appUser)
+	}
+	savedAddresses := appUser.AddressBook.SavedAddresses
+	addressExists := slices.Contains(
+		savedAddresses,
+		opts.AddressID)
+	switch opts.Action {
+	case Add:
+		if !addressExists {
+			savedAddresses = append(savedAddresses, opts.AddressID)
+		}
+	case Delete:
+		if addressExists {
+			savedAddresses = slices.DeleteFunc(
+				savedAddresses,
+				func(id string) bool {
+					return id == opts.AddressID
+				})
+		}
+	}
+	_, err = docRef.Update(ctx, []firestore.Update{
+		{Path: "addressBook.savedAddresses", Value: savedAddresses},
+	})
+	if err != nil {
+		u.logger.Error(
+			"failed to update saved addresses",
+			"uid", opts.UserID,
+			"error", err)
+		return "", fmt.Errorf("failed to update saved addresses: %w", err)
+	}
+	return opts.AddressID, nil
+}
+
+// helper functions
+func backfillAddressBook(appUser *models.AppUser) {
+	appUser.AddressBook = &models.AddressBook{
+		SavedAddresses: []string{},
+	}
 }

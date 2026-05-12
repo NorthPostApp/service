@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"north-post/service/internal/domain/v1/models"
-	"north-post/service/internal/services"
+	"north-post/service/internal/repository"
 	"north-post/service/internal/transport/http/v1/middleware"
 	"testing"
 
@@ -17,19 +17,29 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type mockUserService struct {
+type mockUserRepo struct {
 	mock.Mock
 }
 
-func (m *mockUserService) AuthenticateAppUserById(
+func (m *mockUserRepo) AuthenticateAppUserById(
 	ctx context.Context,
-	input services.AuthenticateAppUserByIdInput,
-) (*services.AuthenticateAppUserByIdOutput, error) {
-	args := m.Called(ctx, input)
+	opts repository.GetUserByIdOptions) (*models.AppUser, error) {
+	args := m.Called(ctx, opts)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*services.AuthenticateAppUserByIdOutput), args.Error(1)
+	return args.Get(0).(*models.AppUser), args.Error(1)
+}
+
+func (m *mockUserRepo) UpdateUserSavedAddresses(
+	ctx context.Context,
+	opts *repository.UpdateUserSavedAddressesOptions,
+) (string, error) {
+	args := m.Called(ctx, opts)
+	if args.Get(0) == nil {
+		return "", args.Error(1)
+	}
+	return args.Get(0).(string), args.Error(1)
 }
 
 func setupUserRouter(handler *UserHandler, uid string) *gin.Engine {
@@ -49,7 +59,7 @@ func TestAuthenticateAppUser(t *testing.T) {
 	tests := []struct {
 		name           string
 		uid            string
-		mockOutput     *services.AuthenticateAppUserByIdOutput
+		mockOutput     *models.AppUser
 		mockError      error
 		expectedStatus int
 		expectCall     bool
@@ -57,13 +67,11 @@ func TestAuthenticateAppUser(t *testing.T) {
 		{
 			name: "success",
 			uid:  "user-123",
-			mockOutput: &services.AuthenticateAppUserByIdOutput{
-				UserData: models.AppUser{
-					Email:       "test@example.com",
-					DisplayName: "Test User",
-					LastLogin:   123,
-					ImageUrl:    "https://example.com/avatar.png",
-				},
+			mockOutput: &models.AppUser{
+				Email:       "test@example.com",
+				DisplayName: "Test User",
+				LastLogin:   123,
+				ImageUrl:    "https://example.com/avatar.png",
 			},
 			mockError:      nil,
 			expectedStatus: http.StatusOK,
@@ -88,12 +96,12 @@ func TestAuthenticateAppUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockSrv := new(mockUserService)
-			handler := NewUserHandler(mockSrv, slog.Default())
+			mockRepo := new(mockUserRepo)
+			handler := NewUserHandler(mockRepo, slog.Default())
 			router := setupUserRouter(handler, tt.uid)
 			if tt.expectCall {
-				input := services.AuthenticateAppUserByIdInput{Uid: tt.uid}
-				mockSrv.On("AuthenticateAppUserById", mock.Anything, input).
+				opts := repository.GetUserByIdOptions{Uid: tt.uid}
+				mockRepo.On("AuthenticateAppUserById", mock.Anything, opts).
 					Return(tt.mockOutput, tt.mockError).Once()
 			}
 			req, _ := http.NewRequest("POST", "/user/signin", nil)
@@ -106,7 +114,7 @@ func TestAuthenticateAppUser(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Contains(t, resp, "data")
 			}
-			mockSrv.AssertExpectations(t)
+			mockRepo.AssertExpectations(t)
 		})
 	}
 }

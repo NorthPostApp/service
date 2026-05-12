@@ -18,7 +18,7 @@ import (
 
 const (
 	defaultPageSize = 20
-	maxPagesize     = 100
+	maxPageSize     = 100
 )
 
 type TypesenseClient struct {
@@ -186,8 +186,8 @@ func (c *TypesenseClient) SearchAddresses(
 	perPage := params.PageSize
 	if perPage <= 0 {
 		perPage = defaultPageSize
-	} else if perPage > maxPagesize {
-		perPage = maxPagesize
+	} else if perPage > maxPageSize {
+		perPage = maxPageSize
 	}
 	searchParams := &api.SearchCollectionParams{
 		Q:       pointer.String(q),
