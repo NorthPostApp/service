@@ -136,17 +136,17 @@ func (u *UserRepository) CreateAppUser(
 
 /* ---- User Address Book ---- */
 
-type UpdateSavedAddressesActon int
+type UpdateSavedAddressesAction int
 
 const (
-	Add UpdateSavedAddressesActon = iota
+	Add UpdateSavedAddressesAction = iota
 	Delete
 )
 
 type UpdateUserSavedAddressesOptions struct {
 	UserID    string
 	AddressID string
-	Action    UpdateSavedAddressesActon
+	Action    UpdateSavedAddressesAction
 }
 
 func (u *UserRepository) UpdateUserSavedAddresses(

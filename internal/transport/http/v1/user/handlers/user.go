@@ -114,7 +114,7 @@ func (h *UserHandler) validateUser(c *gin.Context, uid string) bool {
 	return true
 }
 
-func (h *UserHandler) convertUpdateMethod(action string) repository.UpdateSavedAddressesActon {
+func (h *UserHandler) convertUpdateMethod(action string) repository.UpdateSavedAddressesAction {
 	action = strings.ToLower(action)
 	switch action {
 	case "add":
