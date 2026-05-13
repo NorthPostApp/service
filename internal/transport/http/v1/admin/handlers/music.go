@@ -43,22 +43,22 @@ func NewMusicHandler(service musicService, logger *slog.Logger) *MusicHandler {
 // @Produce json
 // @Param refresh query bool false "Whether to refresh the music list"
 // @Success 200 {object} dto.GetMusicListResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /admin/music/ [get]
 func (h *MusicHandler) GetMusicList(c *gin.Context) {
 	refreshStr := strings.TrimSpace(c.Query("refresh"))
 	shouldRefresh, err := strconv.ParseBool(refreshStr)
 	if err != nil && refreshStr != "" {
 		h.logger.Error("failed to parse refresh query to boolean", "query", refreshStr)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid refresh parameter"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "Invalid refresh parameter"})
 		return
 	}
 	if shouldRefresh {
 		output, err := h.service.RefreshMusicList(c.Request.Context())
 		if err != nil {
 			h.logger.Error("failed to refresh music list", "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 			return
 		}
 		response := dto.GetMusicListResponse{Data: dto.ToMusicDTOs(output.Data)}
@@ -68,7 +68,7 @@ func (h *MusicHandler) GetMusicList(c *gin.Context) {
 	output, err := h.service.GetAllMusicList(c.Request.Context())
 	if err != nil {
 		h.logger.Error("failed to get all music list", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 	response := dto.GetMusicListResponse{Data: dto.ToMusicDTOs(output.Data)}
@@ -84,8 +84,8 @@ func (h *MusicHandler) GetMusicList(c *gin.Context) {
 // @Param genre path string true "Music genre"
 // @Param track path string true "Music track filename"
 // @Success 200 {object} dto.GetPresignedMusicURLResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /admin/music/{genre}/{track} [get]
 func (h *MusicHandler) GetPresignedMusicURL(c *gin.Context) {
 	genre := strings.TrimSpace(c.Param("genre"))
@@ -100,7 +100,7 @@ func (h *MusicHandler) GetPresignedMusicURL(c *gin.Context) {
 	output, err := h.service.GetPresignedMusicURL(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to get presigned music url", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get presigned url"})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to get presigned url"})
 		return
 	}
 	response := dto.GetPresignedMusicURLResponse{Data: output.URL}

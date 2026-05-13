@@ -34,8 +34,8 @@ func NewUserHandler(service userService, logger *slog.Logger) *UserHandler {
 // @Param Authorization header string true "Bearer idToken"
 // @Produce json
 // @Success 200 {object} dto.SignInAdminUserResponse
-// @Failure 401 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /admin/user/signin [post]
 func (h *UserHandler) SignInAdminUser(c *gin.Context) {
 	uid := c.GetString(middleware.UidKey) // from the middleware
@@ -45,7 +45,7 @@ func (h *UserHandler) SignInAdminUser(c *gin.Context) {
 			"path", c.Request.URL.Path,
 			"client_ip", c.ClientIP(),
 		)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized id token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse{Error: "Unauthorized id token"})
 		return
 	}
 	input := services.SignInAdminUserByIdInput{
@@ -54,7 +54,7 @@ func (h *UserHandler) SignInAdminUser(c *gin.Context) {
 	output, err := h.service.SignInAdminUserById(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to sign in admin user", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign in user"})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "Failed to sign in user"})
 		return
 	}
 	response := dto.SignInAdminUserResponse{

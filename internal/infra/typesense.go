@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"north-post/service/internal/domain/v1/models"
-	"north-post/service/internal/transport/http/v1/utils"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -279,25 +279,40 @@ func (c *TypesenseClient) GetSystemInfo(ctx context.Context) (*TypesenseSystemIn
 	}
 	typesenseSystemInfo := &TypesenseSystemInfo{Health: health}
 	if v, ok := metrics["system_cpu_active_percentage"].(string); ok {
-		typesenseSystemInfo.SystemCPUActivePercentage = utils.StringToFloat32(v)
+		typesenseSystemInfo.SystemCPUActivePercentage = stringToFloat32(v)
 	}
 	if v, ok := metrics["system_disk_total_bytes"].(string); ok {
-		typesenseSystemInfo.SystemDiskTotalBytes = utils.StringToInt64(v)
+		typesenseSystemInfo.SystemDiskTotalBytes = stringToInt64(v)
 	}
 	if v, ok := metrics["system_disk_used_bytes"].(string); ok {
-		typesenseSystemInfo.SystemDiskUsedBytes = utils.StringToInt64(v)
+		typesenseSystemInfo.SystemDiskUsedBytes = stringToInt64(v)
 	}
 	if v, ok := metrics["system_memory_total_bytes"].(string); ok {
-		typesenseSystemInfo.SystemMemoryTotalBytes = utils.StringToInt64(v)
+		typesenseSystemInfo.SystemMemoryTotalBytes = stringToInt64(v)
 	}
 	if v, ok := metrics["system_memory_used_bytes"].(string); ok {
-		typesenseSystemInfo.SystemMemoryUsedBytes = utils.StringToInt64(v)
+		typesenseSystemInfo.SystemMemoryUsedBytes = stringToInt64(v)
 	}
 	if v, ok := metrics["system_network_sent_bytes"].(string); ok {
-		typesenseSystemInfo.SystemNetworkSentBytes = utils.StringToInt64(v)
+		typesenseSystemInfo.SystemNetworkSentBytes = stringToInt64(v)
 	}
 	if v, ok := metrics["system_network_received_bytes"].(string); ok {
-		typesenseSystemInfo.SystemNetworkReceivedBytes = utils.StringToInt64(v)
+		typesenseSystemInfo.SystemNetworkReceivedBytes = stringToInt64(v)
 	}
 	return typesenseSystemInfo, nil
+}
+
+// Helper functions
+func stringToFloat32(value string) float32 {
+	if f, err := strconv.ParseFloat(value, 32); err == nil {
+		return float32(f)
+	}
+	return float32(0)
+}
+
+func stringToInt64(value string) int64 {
+	if f, err := strconv.ParseFloat(value, 64); err == nil {
+		return int64(f)
+	}
+	return int64(0)
 }
