@@ -14,7 +14,6 @@ import (
 type addressRepository interface {
 	GetAddresses(context.Context, repository.GetAddressesOptions) (
 		*repository.GetAddressesResponse, error)
-	GetAddressById(context.Context, repository.GetAddressByIdOptions) (*models.AddressItem, error)
 	CreateNewAddress(context.Context, repository.CreateNewAddressOption) (string, error)
 	UpdateAddress(context.Context, repository.UpdateAddressOption) (*models.AddressItem, error)
 	DeleteAddress(context.Context, repository.DeleteAddressOption) (string, error)
@@ -56,15 +55,6 @@ type GetAddressesOutput struct {
 	TotalCount int64
 	Page       int
 	TotalPages int
-}
-
-type GetAddressByIdInput struct {
-	Language models.Language
-	ID       string
-}
-
-type GetAddressByIdOutput struct {
-	Address models.AddressItem
 }
 
 type CreateNewAddressInput struct {
@@ -157,18 +147,6 @@ func (s *AddressService) GetAddresses(
 			TotalPages: response.TotalPages,
 		},
 		nil
-}
-
-func (s *AddressService) GetAddressById(ctx context.Context, input GetAddressByIdInput) (*GetAddressByIdOutput, error) {
-	opts := repository.GetAddressByIdOptions{
-		Language: input.Language,
-		ID:       input.ID,
-	}
-	address, err := s.repo.GetAddressById(ctx, opts)
-	if err != nil {
-		return nil, err
-	}
-	return &GetAddressByIdOutput{Address: *address}, nil
 }
 
 func (s *AddressService) CreateNewAddress(ctx context.Context, input CreateNewAddressInput) (*CreateNewAddressOutput, error) {

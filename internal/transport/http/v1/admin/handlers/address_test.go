@@ -30,13 +30,6 @@ func (m *MockAddressService) GetAddresses(
 	args := m.Called(ctx, input)
 	return args.Get(0).(*services.GetAddressesOutput), args.Error(1)
 }
-func (m *MockAddressService) GetAddressById(
-	ctx context.Context,
-	input services.GetAddressByIdInput,
-) (*services.GetAddressByIdOutput, error) {
-	args := m.Called(ctx, input)
-	return args.Get(0).(*services.GetAddressByIdOutput), args.Error(1)
-}
 func (m *MockAddressService) CreateNewAddress(
 	ctx context.Context,
 	input services.CreateNewAddressInput,
@@ -93,7 +86,6 @@ func (m *MockAddressService) SyncToTypesense(
 func setupRouter(handler *AddressHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
-	r.GET("/admin/address/:id", handler.GetAddressById)
 	r.GET("/admin/address/tags", handler.GetAllTags)
 	r.POST("/admin/address", handler.GetAddresses)
 	r.POST("/admin/address/generate", handler.GenerateNewAddress)
@@ -178,77 +170,6 @@ func TestGetAllAddresses(t *testing.T) {
 		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
-}
-
-func TestGetAddressesById(t *testing.T) {
-	t.Parallel()
-	mockSvc := new(MockAddressService)
-	handler := NewAddressHandler(mockSvc, slog.Default())
-	router := setupRouter(handler)
-	tests := []struct {
-		name           string
-		url            string
-		mockOutput     *services.GetAddressByIdOutput
-		mockError      error
-		expectedStatus int
-	}{
-		{
-			name:           "success",
-			url:            "/admin/address/1?language=en",
-			mockOutput:     &services.GetAddressByIdOutput{Address: models.AddressItem{}},
-			mockError:      nil,
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:           "failed request",
-			url:            "/admin/address/1?language=en",
-			mockOutput:     nil,
-			mockError:      errors.New("fail"),
-			expectedStatus: http.StatusInternalServerError,
-		},
-		{
-			name:           "missing id",
-			url:            "/admin/address/?language=en",
-			mockOutput:     nil,
-			mockError:      errors.New("id required"),
-			expectedStatus: http.StatusNotFound,
-		},
-		{
-			name:           "empty id",
-			url:            "/admin/address/ ?language=en",
-			mockOutput:     nil,
-			mockError:      errors.New("id required"),
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "missing language",
-			url:            "/admin/address/1",
-			mockOutput:     nil,
-			mockError:      errors.New("language is requires"),
-			expectedStatus: http.StatusBadRequest,
-		},
-		{
-			name:           "invalid language",
-			url:            "/admin/address/1?language=k",
-			mockOutput:     nil,
-			mockError:      errors.New("error"),
-			expectedStatus: http.StatusBadRequest,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			input := services.GetAddressByIdInput{Language: "en", ID: "1"}
-			mockSvc.On("GetAddressById", mock.Anything, input).
-				Return(tt.mockOutput, tt.mockError).Once()
-			req, _ := http.NewRequest("GET", tt.url, nil)
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
-			assert.Equal(t, tt.expectedStatus, w.Code)
-			if tt.mockOutput != nil {
-				mockSvc.AssertExpectations(t)
-			}
-		})
-	}
 }
 
 func TestCreateNewAddress(t *testing.T) {
