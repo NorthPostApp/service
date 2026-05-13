@@ -35,7 +35,7 @@ func NewPromptHandler(service promptService, logger *slog.Logger) *PromptHandler
 // @Produce json
 // @Param language query string false "Language code"
 // @Success 200 {object} dto.GetSystemAddressGenerationPromptResponse
-// @Failure 500 {object} map[string]string
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /admin/prompt/system-address-generation [get]
 func (h *PromptHandler) GetSystemAddressGenerationPrompt(c *gin.Context) {
 	languageStr := c.Query("language")
@@ -47,7 +47,7 @@ func (h *PromptHandler) GetSystemAddressGenerationPrompt(c *gin.Context) {
 	prompt, err := h.service.GetSystemAddressGenerationPrompt(c.Request.Context(), opts)
 	if err != nil {
 		h.logger.Error("failed to get system address generation prompt", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 	response := dto.GetSystemAddressGenerationPromptResponse{

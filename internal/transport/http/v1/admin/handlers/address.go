@@ -45,8 +45,8 @@ func NewAddressHandler(service addressService, logger *slog.Logger) *AddressHand
 // @Produce json
 // @Param request body dto.GetAddressesRequest true "Request body"
 // @Success 200 {object} dto.GetAddressesResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /admin/address [post]
 func (h *AddressHandler) GetAddresses(c *gin.Context) {
 	var req dto.GetAddressesRequest
@@ -66,7 +66,7 @@ func (h *AddressHandler) GetAddresses(c *gin.Context) {
 	output, err := h.service.GetAddresses(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to get addresses", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 	response := dto.GetAddressesResponse{
@@ -83,8 +83,8 @@ func (h *AddressHandler) GetAddresses(c *gin.Context) {
 // @Produce json
 // @Param request body dto.CreateAddressRequest true "Request body"
 // @Success 200 {object} dto.CreateAddressResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /admin/address [put]
 func (h *AddressHandler) CreateNewAddress(c *gin.Context) {
 	var req dto.CreateAddressRequest
@@ -101,7 +101,7 @@ func (h *AddressHandler) CreateNewAddress(c *gin.Context) {
 	output, err := h.service.CreateNewAddress(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to create new address", "address", req, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 	response := dto.CreateAddressResponse{
@@ -119,8 +119,8 @@ func (h *AddressHandler) CreateNewAddress(c *gin.Context) {
 // @Produce json
 // @Param request body dto.UpdateAddressRequest true "Request body"
 // @Success 200 {object} dto.UpdateAddressResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /admin/address [post]
 func (h *AddressHandler) UpdateAddress(c *gin.Context) {
 	var req dto.UpdateAddressRequest
@@ -138,7 +138,7 @@ func (h *AddressHandler) UpdateAddress(c *gin.Context) {
 	output, err := h.service.UpdateAddress(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to update address", "address", req, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 	response := dto.UpdateAddressResponse{
@@ -156,20 +156,20 @@ func (h *AddressHandler) UpdateAddress(c *gin.Context) {
 // @Param id path string true "Address ID"
 // @Param language query string true "Language code (e.g., en, zh)"
 // @Success 200 {object} dto.DeleteAddressResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /admin/address/{id} [delete]
 func (h *AddressHandler) DeleteAddress(c *gin.Context) {
 	id := c.Param("id")
 	if strings.TrimSpace(id) == "" {
 		h.logger.Warn("missing address id parameter")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Address ID is required"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "Address ID is required"})
 		return
 	}
 	languageStr := c.Query("language")
 	if languageStr == "" {
 		h.logger.Warn("missing language parameter")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Language is required"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "Language is required"})
 		return
 	}
 	language := models.Language(languageStr)
@@ -183,7 +183,7 @@ func (h *AddressHandler) DeleteAddress(c *gin.Context) {
 	output, err := h.service.DeleteAddress(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to delete address", "id", id, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 	response := dto.DeleteAddressResponse{Data: dto.AddressID{ID: output.ID}}
@@ -198,8 +198,8 @@ func (h *AddressHandler) DeleteAddress(c *gin.Context) {
 // @Produce json
 // @Param request body dto.GenerateNewAddressRequest true "Request body"
 // @Success 200 {object} dto.GenerateNewAddressResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /admin/address/generate [post]
 func (h *AddressHandler) GenerateNewAddress(c *gin.Context) {
 	var req dto.GenerateNewAddressRequest
@@ -220,7 +220,7 @@ func (h *AddressHandler) GenerateNewAddress(c *gin.Context) {
 	output, err := h.service.GenerateNewAddress(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to generate new address", "request", req, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 	response := dto.GenerateNewAddressResponse{
@@ -237,15 +237,15 @@ func (h *AddressHandler) GenerateNewAddress(c *gin.Context) {
 // @Produce json
 // @Param language query string true "Language code (e.g., en, zh)"
 // @Success 200 {object} dto.GetAllTagsResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /admin/address/tags [get]
 func (h *AddressHandler) GetAllTags(c *gin.Context) {
 	languageStr := strings.TrimSpace(c.Query("language"))
 	refreshStr := strings.TrimSpace(c.Query("refresh"))
 	if languageStr == "" {
 		h.logger.Warn("missing language parameter")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Language is required"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "Language is required"})
 		return
 	}
 	language := models.Language(languageStr)
@@ -255,7 +255,7 @@ func (h *AddressHandler) GetAllTags(c *gin.Context) {
 	shouldRefresh, err := strconv.ParseBool(refreshStr)
 	if err != nil && refreshStr != "" {
 		h.logger.Error("failed to parse refresh query to boolean", "query", refreshStr)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid refresh parameter"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "Invalid refresh parameter"})
 		return
 	}
 	var response dto.GetAllTagsResponse
@@ -264,7 +264,7 @@ func (h *AddressHandler) GetAllTags(c *gin.Context) {
 		output, err := h.service.RefreshTags(c.Request.Context(), input)
 		if err != nil {
 			h.logger.Error("failed to refresh tags", "language", language, "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 			return
 		}
 		response = dto.GetAllTagsResponse{Data: dto.ToTagsRecordDTO(output.TagsRecord, language)}
@@ -273,7 +273,7 @@ func (h *AddressHandler) GetAllTags(c *gin.Context) {
 		output, err := h.service.GetAllTags(c.Request.Context(), input)
 		if err != nil {
 			h.logger.Error("failed to get all tags", "language", language, "error", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 			return
 		}
 		response = dto.GetAllTagsResponse{Data: dto.ToTagsRecordDTO(output.TagsRecord, language)}
@@ -289,8 +289,8 @@ func (h *AddressHandler) GetAllTags(c *gin.Context) {
 // @Produce json
 // @Param request body dto.SyncToTypesenseRequest true "Request body"
 // @Success 200 {object} dto.SyncToTypesenseResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /admin/address/sync [post]
 func (h *AddressHandler) SyncToTypesense(c *gin.Context) {
 	var req dto.SyncToTypesenseRequest
@@ -304,7 +304,7 @@ func (h *AddressHandler) SyncToTypesense(c *gin.Context) {
 	output, err := h.service.SyncToTypesense(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to sync to Typesense", "language", req.Language, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 	response := dto.SyncToTypesenseResponse{Data: dto.ToSyncToTypesenseDTO(output)}

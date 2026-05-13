@@ -8,9 +8,10 @@ import (
 )
 
 type Handlers struct {
-	Music   *handlers.MusicHandler
-	User    *handlers.UserHandler
-	Address *handlers.AddressHandler
+	Music       *handlers.MusicHandler
+	User        *handlers.UserHandler
+	Address     *handlers.AddressHandler
+	AddressBook *handlers.AddressBookHandler
 }
 
 func SetupUserRouter(router *gin.RouterGroup, h *Handlers, middlewares *middleware.Middlewares) {
@@ -30,9 +31,9 @@ func SetupUserRouter(router *gin.RouterGroup, h *Handlers, middlewares *middlewa
 			address.POST("", middlewares.LanguageFromBody, h.Address.GetAddresses)
 			address.GET("/tags", middlewares.LanguageFromQuery, h.Address.GetAllTags)
 		}
-		addressBook := user.Group("/addressBook")
+		addressBook := user.Group("/address-book")
 		{
-			addressBook.PATCH("", h.User.UpdateSavedAddresses)
+			addressBook.PATCH("", h.AddressBook.UpdateSavedAddresses)
 		}
 	}
 }

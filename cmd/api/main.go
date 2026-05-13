@@ -128,6 +128,9 @@ func main() {
 	// Typesense handler
 	adminTypesenseHandler := adminHandlers.NewTypesenseHandler(typesenseClient, logger)
 
+	// User Address Book
+	userAddressBookHandler := userHandlers.NewAddressBookHandler(userRepo, addressRepo, logger)
+
 	// Setup routers
 	router := gin.Default()
 	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
@@ -163,9 +166,10 @@ func main() {
 
 	user.SetupUserRouter(router_v1,
 		&user.Handlers{
-			Music:   userMusicHandler,
-			User:    appUserDataHandler,
-			Address: userAddressHandler,
+			Music:       userMusicHandler,
+			User:        appUserDataHandler,
+			Address:     userAddressHandler,
+			AddressBook: userAddressBookHandler,
 		},
 		middlewares)
 

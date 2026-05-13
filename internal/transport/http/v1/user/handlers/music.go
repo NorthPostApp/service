@@ -36,18 +36,18 @@ func NewMusicHandler(service musicService, logger *slog.Logger) *MusicHandler {
 // GetMusicList godoc
 // @Summary Get music list
 // @Description Get the list of music tracks.
-// @Tags User Music
+// @Tags App User
 // @Accept json
 // @Produce json
 // @Success 200 {object} dto.GetMusicListResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /user/music/list [get]
 func (h *MusicHandler) GetMusicList(c *gin.Context) {
 	output, err := h.service.GetAllMusicList(c.Request.Context())
 	if err != nil {
 		h.logger.Error("failed to get all music list", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 	response := dto.GetMusicListResponse{Data: dto.ToMusicDTOs(output.Data)}
@@ -57,14 +57,14 @@ func (h *MusicHandler) GetMusicList(c *gin.Context) {
 // GetPresignedMusicURL godoc
 // @Summary Get presigned music URL
 // @Description Get a presigned URL for a specific music track by genre and track name.
-// @Tags User Music
+// @Tags App User
 // @Accept json
 // @Produce json
 // @Param genre path string true "Music genre"
 // @Param track path string true "Music track filename"
 // @Success 200 {object} dto.GetPresignedMusicURLResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /user/music/{genre}/{track} [get]
 func (h *MusicHandler) GetPresignedMusicURL(c *gin.Context) {
 	genre := strings.TrimSpace(c.Param("genre"))
@@ -79,7 +79,7 @@ func (h *MusicHandler) GetPresignedMusicURL(c *gin.Context) {
 	output, err := h.service.GetPresignedMusicURL(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to get presigned music url", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get presigned url"})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to get presigned url"})
 		return
 	}
 	response := dto.GetPresignedMusicURLResponse{Data: output.URL}

@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"north-post/service/internal/domain/v1/models"
+	"north-post/service/internal/transport/http/v1/dto"
 	"north-post/service/internal/transport/http/v1/utils"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +20,7 @@ func LanguageFromQueryMiddleware(logger *slog.Logger) gin.HandlerFunc {
 		language := models.Language(c.Query("language"))
 		if language == "" {
 			logger.Error("language query is required")
-			c.JSON(http.StatusBadRequest, gin.H{"error": "language is required"})
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "language is required"})
 			c.Abort()
 			return
 		}
@@ -39,7 +40,7 @@ func LanguageFromBodyMiddleware(logger *slog.Logger) gin.HandlerFunc {
 		}
 		if err := c.ShouldBindBodyWith(&req, binding.JSON); err != nil {
 			logger.Error("failed to bind language body", "error", err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid request body"})
 			c.Abort()
 			return
 		}

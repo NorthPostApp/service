@@ -37,13 +37,13 @@ func NewAddressHandler(service addressService, logger *slog.Logger) *AddressHand
 // GetAllTags godoc
 // @Summary Get all address tags
 // @Description Read and return address tags data by given language
-// @Tags User Address
+// @Tags App User
 // @Accept json
 // @Produce json
 // @Param language query string true "Language code (e.g., en, zh)"
 // @Success 200 {object} dto.GetAllTagsResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /user/address/tags [get]
 func (h *AddressHandler) GetAllTags(c *gin.Context) {
 	language := models.Language(c.GetString(middleware.LanguageKey))
@@ -51,7 +51,7 @@ func (h *AddressHandler) GetAllTags(c *gin.Context) {
 	output, err := h.service.GetAllTags(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to get all tags", "language", language, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get all tags"})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to get all tags"})
 		return
 	}
 	response := dto.GetAllTagsResponse{Data: dto.ToTagsRecordDTO(output.TagsRecord, language)}
@@ -61,13 +61,13 @@ func (h *AddressHandler) GetAllTags(c *gin.Context) {
 // GetAddresses godoc
 // @Summary Get addresses
 // @Description Search and return addresses by language, keywords, tags, and pagination
-// @Tags User Address
+// @Tags App User
 // @Accept json
 // @Produce json
 // @Param request body dto.GetAddressesRequest true "Get addresses request"
 // @Success 200 {object} dto.GetAddressesResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
 // @Router /user/address [post]
 func (h *AddressHandler) GetAddresses(c *gin.Context) {
 	var req dto.GetAddressesRequest
@@ -84,7 +84,7 @@ func (h *AddressHandler) GetAddresses(c *gin.Context) {
 	output, err := h.service.GetAddresses(c.Request.Context(), input)
 	if err != nil {
 		h.logger.Error("failed to get addresses", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get addresses"})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: "failed to get addresses"})
 		return
 	}
 	response := dto.GetAddressesResponse{
