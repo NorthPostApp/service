@@ -21,7 +21,6 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, middlewares *middlew
 		address := admin.Group("/address")
 		{
 			// GET
-			address.GET("/:id", h.Address.GetAddressById)
 			address.GET("/tags", h.Address.GetAllTags)
 			// POST
 			address.POST("", h.Address.GetAddresses)

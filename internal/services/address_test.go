@@ -28,18 +28,6 @@ func (m *mockAddressRepository) GetAddresses(
 	return args.Get(0).(*repository.GetAddressesResponse), args.Error(1)
 }
 
-func (m *mockAddressRepository) GetAddressById(
-	ctx context.Context,
-	opts repository.GetAddressByIdOptions,
-) (*models.AddressItem, error) {
-	args := m.Called(ctx, opts)
-	var address *models.AddressItem
-	if value := args.Get(0); value != nil {
-		address, _ = value.(*models.AddressItem)
-	}
-	return address, args.Error(1)
-}
-
 func (m *mockAddressRepository) CreateNewAddress(
 	ctx context.Context,
 	opts repository.CreateNewAddressOption,
@@ -205,67 +193,6 @@ func TestAddressService_GetAddresses_Error(t *testing.T) {
 		mock.Anything,
 	).Return(nil, assert.AnError).Once()
 	output, err := service.GetAddresses(context.Background(), input)
-	repo.AssertExpectations(t)
-	assert.Error(t, err)
-	assert.Nil(t, output)
-}
-
-func TestAddressService_GetAddressById(t *testing.T) {
-	t.Parallel()
-	service, repo, _ := setupAddressService()
-	expectedAddress := models.AddressItem{ID: "2", Name: "Address Two"}
-	input := GetAddressByIdInput{
-		Language: models.LanguageZH,
-		ID:       "",
-	}
-	expectedOptions := repository.GetAddressByIdOptions{
-		Language: input.Language,
-		ID:       input.ID,
-	}
-	repo.On("GetAddressById",
-		mock.Anything,
-		mock.MatchedBy(func(opts repository.GetAddressByIdOptions) bool {
-			if opts.Language != expectedOptions.Language {
-				return false
-			}
-			if opts.ID != expectedOptions.ID {
-				return false
-			}
-			return true
-		}),
-	).Return(&expectedAddress, nil).Once()
-	output, err := service.GetAddressById(context.Background(), input)
-	repo.AssertExpectations(t)
-	assert.NoError(t, err)
-	assert.NotNil(t, output)
-	assert.Equal(t, expectedAddress, output.Address)
-}
-
-func TestAddressService_GetAddressById_Error(t *testing.T) {
-	t.Parallel()
-	repo := new(mockAddressRepository)
-	service, repo, _ := setupAddressService()
-	input := GetAddressByIdInput{
-		Language: models.LanguageZH,
-		ID:       "",
-	}
-	expectedOptions := repository.GetAddressByIdOptions{
-		Language: input.Language,
-		ID:       input.ID,
-	}
-	repo.On("GetAddressById",
-		mock.Anything,
-		mock.MatchedBy(func(opts repository.GetAddressByIdOptions) bool {
-			if opts.Language != expectedOptions.Language {
-				return false
-			}
-			if opts.ID != expectedOptions.ID {
-				return false
-			}
-			return true
-		}),
-	).Return(nil, assert.AnError).Once()
-	output, err := service.GetAddressById(context.Background(), input)
 	repo.AssertExpectations(t)
 	assert.Error(t, err)
 	assert.Nil(t, output)

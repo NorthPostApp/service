@@ -17,7 +17,6 @@ import (
 type addressService interface {
 	CreateNewAddress(ctx context.Context, input services.CreateNewAddressInput) (*services.CreateNewAddressOutput, error)
 	GenerateNewAddress(ctx context.Context, input services.GenerateAddressInput) (*services.GenerateAddressOutput, error)
-	GetAddressById(ctx context.Context, input services.GetAddressByIdInput) (*services.GetAddressByIdOutput, error)
 	GetAddresses(ctx context.Context, input services.GetAddressesInput) (*services.GetAddressesOutput, error)
 	UpdateAddress(ctx context.Context, input services.UpdateAddressInput) (*services.UpdateAddressOutput, error)
 	DeleteAddress(ctx context.Context, input services.DeleteAddressInput) (*services.DeleteAddressOutput, error)
@@ -72,51 +71,6 @@ func (h *AddressHandler) GetAddresses(c *gin.Context) {
 	}
 	response := dto.GetAddressesResponse{
 		Data: dto.ToGetAddressesResponseDTO(output, req.Language),
-	}
-	c.JSON(http.StatusOK, response)
-}
-
-// GetAddressById godoc
-// @Summary Get address by ID
-// @Description Get a single address by ID with language query parameter
-// @Tags Admin Address
-// @Accept json
-// @Produce json
-// @Param id path string true "Address ID"
-// @Param language query string true "Language code (e.g., en, zh)"
-// @Success 200 {object} dto.GetAddressByIdResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /admin/address/{id} [get]
-func (h *AddressHandler) GetAddressById(c *gin.Context) {
-	id := c.Param("id")
-	if strings.TrimSpace(id) == "" {
-		h.logger.Warn("missing address id parameter")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Address ID is required"})
-		return
-	}
-	languageStr := c.Query("language")
-	if languageStr == "" {
-		h.logger.Warn("missing language parameter")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Language is required"})
-		return
-	}
-	language := models.Language(languageStr)
-	if !utils.ValidateLanguage(c, language, h.logger) {
-		return
-	}
-	input := services.GetAddressByIdInput{
-		Language: language,
-		ID:       id,
-	}
-	output, err := h.service.GetAddressById(c.Request.Context(), input)
-	if err != nil {
-		h.logger.Error("failed to get address", "addressId", input.ID, "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	response := dto.GetAddressByIdResponse{
-		Data: dto.ToAddressDTO(output.Address),
 	}
 	c.JSON(http.StatusOK, response)
 }

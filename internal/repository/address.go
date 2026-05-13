@@ -60,9 +60,14 @@ type GetAllTagsOption struct {
 	Language models.Language
 }
 
-type GetAddressByIdOptions struct {
+type GetAddressesByIDsOptions struct {
 	Language models.Language
-	ID       string
+	IDs      []string
+}
+
+type GetAddressesByIDsResponse struct {
+	Addresses  []models.AddressItem
+	InvalidIDs []string
 }
 
 type UpdateAddressOption struct {
@@ -110,39 +115,11 @@ func (r *AddressRepository) GetAddresses(ctx context.Context, opts GetAddressesO
 		)
 		return nil, fmt.Errorf("failed to get search addresses through Typesense")
 	}
-	// create a slice of doc refs for the batch fetch from firestore
-	collectionRef := r.client.Collection(collectionName)
-	docRefs := make([]*firestore.DocumentRef, len(result.Hits))
-	for i, id := range result.Hits {
-		docRefs[i] = collectionRef.Doc(id)
-	}
-	docs, err := r.client.GetAll(ctx, docRefs)
+	addresses, _, err := r.batchFetchAddresses(ctx, collectionName, result.Hits)
 	if err != nil {
-		r.logger.Error("failed to batch fetch addresses",
-			"collectionName", collectionName,
-			"error", err,
-		)
-		return nil, fmt.Errorf("failed to batch fetch addresses: %w", err)
+		return nil, err
 	}
-	addresses := []models.AddressItem{}
-	failedCount := 0
-	for _, doc := range docs {
-		if !doc.Exists() {
-			failedCount++
-			r.logger.Warn("address document not found", "docID", doc.Ref.ID)
-		}
-		var addressItem models.AddressItem
-		if err := doc.DataTo(&addressItem); err != nil {
-			failedCount++
-			r.logger.Warn("failed to parse address document", "docID", doc.Ref.ID, "error", err)
-		} else {
-			addresses = append(addresses, addressItem)
-		}
-	}
-	if failedCount > 0 {
-		r.logger.Warn("some documents failed to fetch", "count", failedCount)
-	}
-	// should ensure result.PageSize never be 0 (it is guardrailed in SearchAddresses function)
+	// should ensure result.PageSize never be 0 (it is protected in SearchAddresses function)
 	guardedPageSize := math.Max(float64(result.PageSize), 1.0)
 	return &GetAddressesResponse{
 		Addresses:  addresses,
@@ -153,22 +130,18 @@ func (r *AddressRepository) GetAddresses(ctx context.Context, opts GetAddressesO
 }
 
 // Get a address by ID
-func (r *AddressRepository) GetAddressById(ctx context.Context, opts GetAddressByIdOptions) (*models.AddressItem, error) {
+func (r *AddressRepository) GetAddressesByIDs(
+	ctx context.Context,
+	opts GetAddressesByIDsOptions) (*GetAddressesByIDsResponse, error) {
 	collectionName := getAddressCollectionName(opts.Language)
-	docRef := r.client.Collection(collectionName).Doc(opts.ID)
-	// get document
-	doc, err := docRef.Get(ctx)
+	addresses, invalidIDs, err := r.batchFetchAddresses(ctx, collectionName, opts.IDs)
 	if err != nil {
-		r.logger.Error("failed to get address document", "addressID", opts.ID, "error", err)
-		return nil, fmt.Errorf("failed to get address with ID %s", opts.ID)
+		return nil, err
 	}
-	// parse data
-	var address models.AddressItem
-	if err := doc.DataTo(&address); err != nil {
-		r.logger.Error("failed to parse address document", "addressID", opts.ID, "error", err)
-		return nil, fmt.Errorf("failed to parse address data: %w", err)
-	}
-	return &address, nil
+	return &GetAddressesByIDsResponse{
+		Addresses:  addresses,
+		InvalidIDs: invalidIDs,
+	}, nil
 }
 
 func (r *AddressRepository) UpdateAddress(ctx context.Context, opts UpdateAddressOption) (*models.AddressItem, error) {
@@ -375,7 +348,51 @@ func (r *AddressRepository) SyncToTypesense(
 	}, nil
 }
 
-// =========== Helper functions ==========
+// =========== Utility Methods ==========
+
+func (r *AddressRepository) batchFetchAddresses(
+	ctx context.Context,
+	collectionName string,
+	IDs []string) ([]models.AddressItem, []string, error) {
+	collectionRef := r.client.Collection(collectionName)
+	docRefs := make([]*firestore.DocumentRef, len(IDs))
+	for i, id := range IDs {
+		docRefs[i] = collectionRef.Doc(id)
+	}
+	docs, err := r.client.GetAll(ctx, docRefs)
+	if err != nil {
+		r.logger.Error("failed to batch fetch addresses",
+			"collectionName", collectionName,
+			"error", err,
+		)
+		return nil, nil, fmt.Errorf("failed to batch fetch addresses: %w", err)
+	}
+	addresses := []models.AddressItem{}
+	invalidIDs := []string{}
+	for _, doc := range docs {
+		if !doc.Exists() {
+			invalidIDs = append(invalidIDs, doc.Ref.ID)
+			r.logger.Warn("address not found", "ID", doc.Ref.ID)
+		}
+		var addressItem models.AddressItem
+		if err := doc.DataTo(&addressItem); err != nil {
+			r.logger.Warn("failed to parse address",
+				"docID", doc.Ref.ID,
+				"error", err,
+			)
+			invalidIDs = append(invalidIDs, doc.Ref.ID)
+		} else {
+			addresses = append(addresses, addressItem)
+		}
+	}
+	if len(invalidIDs) != 0 {
+		r.logger.Warn("some documents failed to fetch or parse", "count", len(invalidIDs))
+	}
+	return addresses, invalidIDs, nil
+}
+
+// =========== Helper Functions ==========
+
 func getAddressCollectionName(language models.Language) string {
 	return fmt.Sprintf("%s_%s", addressTablePrefix, language.Get())
 }
