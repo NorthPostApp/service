@@ -17,7 +17,7 @@ import (
 func setupAddressBookRouter(handler *AddressBookHandler, uid string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
-	r.PATCH("/user/addressBook", mockAuthMiddleware(uid), handler.UpdateSavedAddresses)
+	r.PATCH("/user/address-book", mockAuthMiddleware(uid), handler.UpdateSavedAddresses)
 	return r
 }
 
@@ -81,7 +81,7 @@ func TestUpdateSavedAddresses(t *testing.T) {
 				mockUserRepo.On("UpdateUserSavedAddresses", mock.Anything, mock.Anything).
 					Return(tt.mockOutput, tt.mockError).Once()
 			}
-			req, _ := http.NewRequest("PATCH", "/user/addressBook", bytes.NewBufferString(tt.body))
+			req, _ := http.NewRequest("PATCH", "/user/address-book", bytes.NewBufferString(tt.body))
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 			assert.Equal(t, tt.expectedStatus, w.Code)

@@ -40,7 +40,7 @@ func NewAddressBookHandler(
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
-// @Router /user/address-book [post]
+// @Router /user/address-book [patch]
 func (h *AddressBookHandler) UpdateSavedAddresses(c *gin.Context) {
 	uid := c.GetString(middleware.UidKey)
 	if !validateUser(c, uid, h.logger) {
