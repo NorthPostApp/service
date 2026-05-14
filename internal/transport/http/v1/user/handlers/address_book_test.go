@@ -14,10 +14,13 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func setupAddressBookRouter(handler *AddressBookHandler, uid string) *gin.Engine {
+func setupAddressBookRouter(handler *AddressBookHandler, uid string, language string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
-	r.PATCH("/user/address-book", mockAuthMiddleware(uid), handler.UpdateSavedAddresses)
+	r.PATCH("/user/address-book",
+		mockAuthMiddleware(uid),
+		mockLanguageMiddleware(language),
+		handler.UpdateSavedAddresses)
 	return r
 }
 
@@ -27,6 +30,7 @@ func TestUpdateSavedAddresses(t *testing.T) {
 		name           string
 		uid            string
 		body           string
+		language       string
 		mockOutput     string
 		mockError      error
 		expectedStatus int
@@ -35,8 +39,9 @@ func TestUpdateSavedAddresses(t *testing.T) {
 		{
 			name:           "success",
 			uid:            "mock_user",
-			body:           `{"addressId":"test_id","action":"add"}`,
-			mockOutput:     "test_id",
+			body:           `{"addressIDs":["test_id"],"action":"add"}`,
+			language:       "zh",
+			mockOutput:     "timestamp",
 			mockError:      nil,
 			expectedStatus: http.StatusOK,
 			expectCall:     true,
@@ -45,6 +50,7 @@ func TestUpdateSavedAddresses(t *testing.T) {
 			name:           "missing uid",
 			uid:            "",
 			body:           "",
+			language:       "zh",
 			mockOutput:     "",
 			mockError:      nil,
 			expectedStatus: http.StatusUnauthorized,
@@ -54,6 +60,7 @@ func TestUpdateSavedAddresses(t *testing.T) {
 			name:           "invalid body",
 			uid:            "mock_user",
 			body:           `{a}`,
+			language:       "zh",
 			mockOutput:     "",
 			mockError:      nil,
 			expectedStatus: http.StatusBadRequest,
@@ -62,8 +69,9 @@ func TestUpdateSavedAddresses(t *testing.T) {
 		{
 			name:           "failed service",
 			uid:            "mock_user",
-			body:           `{"addressId":"test_id","action":"a"}`,
-			mockOutput:     "test_id",
+			body:           `{"addressIDs":["test_id"],"action":"a"}`,
+			language:       "zh",
+			mockOutput:     "timestamp",
 			mockError:      errors.New("invalid method"),
 			expectedStatus: http.StatusInternalServerError,
 			expectCall:     true,
@@ -76,7 +84,7 @@ func TestUpdateSavedAddresses(t *testing.T) {
 			handler := NewAddressBookHandler(mockUserRepo,
 				mockAddressRepo,
 				slog.New(slog.NewTextHandler(io.Discard, nil)))
-			router := setupAddressBookRouter(handler, tt.uid)
+			router := setupAddressBookRouter(handler, tt.uid, tt.language)
 			if tt.expectCall {
 				mockUserRepo.On("UpdateUserSavedAddresses", mock.Anything, mock.Anything).
 					Return(tt.mockOutput, tt.mockError).Once()
@@ -91,7 +99,7 @@ func TestUpdateSavedAddresses(t *testing.T) {
 			resp := w.Body.String()
 			if tt.expectCall && tt.mockError == nil {
 				assert.Contains(t, resp, "data")
-				assert.Contains(t, resp, "test_id")
+				assert.Contains(t, resp, "timestamp")
 			} else {
 				assert.Contains(t, resp, "error")
 			}

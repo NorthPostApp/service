@@ -33,7 +33,8 @@ func SetupUserRouter(router *gin.RouterGroup, h *Handlers, middlewares *middlewa
 		}
 		addressBook := user.Group("/address-book")
 		{
-			addressBook.PATCH("", h.AddressBook.UpdateSavedAddresses)
+			addressBook.PATCH("", middlewares.LanguageFromBody, h.AddressBook.UpdateSavedAddresses)
+			addressBook.GET("", middlewares.LanguageFromQuery, h.AddressBook.GetSavedAddresses)
 		}
 	}
 }

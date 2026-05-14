@@ -121,7 +121,7 @@ func (h *AddressHandler) CreateNewAddress(c *gin.Context) {
 // @Success 200 {object} dto.UpdateAddressResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
-// @Router /admin/address [post]
+// @Router /admin/address/update [post]
 func (h *AddressHandler) UpdateAddress(c *gin.Context) {
 	var req dto.UpdateAddressRequest
 	if !utils.BindJSON(c, &req, h.logger) {
