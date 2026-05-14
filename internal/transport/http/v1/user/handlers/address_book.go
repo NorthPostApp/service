@@ -113,7 +113,7 @@ func (h *AddressBookHandler) GetSavedAddresses(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// Helper functions
+// ---------- Helper methods ----------
 func (h *AddressBookHandler) convertUpdateMethod(action string) repository.UpdateSavedAddressesAction {
 	action = strings.ToLower(action)
 	switch action {
@@ -126,7 +126,6 @@ func (h *AddressBookHandler) convertUpdateMethod(action string) repository.Updat
 	}
 }
 
-// ---------- Helper methods ----------
 func (h *AddressBookHandler) removeInvalidIDsInBackground(uid string, language models.Language, invalidIDs []string) {
 	go func(invalidIDs []string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

@@ -173,7 +173,7 @@ func (u *UserRepository) GetUserSavedAddresses(
 			"uid", opts.Uid,
 			"error", err,
 		)
-		return nil, fmt.Errorf("failed to parse app use document: %w", err)
+		return nil, fmt.Errorf("failed to parse app user document: %w", err)
 	}
 	if appUser.AddressBook == nil || appUser.AddressBook.SavedAddresses == nil {
 		return []string{}, nil
@@ -201,12 +201,13 @@ func (u *UserRepository) UpdateUserSavedAddresses(
 		return "", fmt.Errorf("unsupported update action")
 	}
 	result, err := docRef.Update(ctx, []firestore.Update{
-		{Path: fmt.Sprintf("addressBook.savedAddresses.%s", opts.Language), Value: updateValue},
+		{Path: fmt.Sprintf("addressBook.savedAddresses.%s", opts.Language.Get()), Value: updateValue},
 	})
 	if err != nil {
 		u.logger.Error(
 			"failed to update saved addresses",
 			"uid", opts.UserID,
+			"language", opts.Language,
 			"error", err)
 		return "", fmt.Errorf("failed to update saved addresses: %w", err)
 	}
