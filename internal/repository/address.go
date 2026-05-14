@@ -132,7 +132,7 @@ func (r *AddressRepository) GetAddresses(ctx context.Context, opts GetAddressesO
 // Get a address by ID
 func (r *AddressRepository) GetAddressesByIDs(
 	ctx context.Context,
-	opts GetAddressesByIDsOptions) (*GetAddressesByIDsResponse, error) {
+	opts *GetAddressesByIDsOptions) (*GetAddressesByIDsResponse, error) {
 	collectionName := getAddressCollectionName(opts.Language)
 	addresses, invalidIDs, err := r.batchFetchAddresses(ctx, collectionName, opts.IDs)
 	if err != nil {

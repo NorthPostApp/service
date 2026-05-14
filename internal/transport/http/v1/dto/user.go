@@ -2,21 +2,12 @@ package dto
 
 import "north-post/service/internal/domain/v1/models"
 
-type UpdateUserSavedAddressRequest struct {
-	AddressId string `json:"addressId"`
-	Action    string `json:"action"`
-}
-
 type SignInAdminUserResponse struct {
 	Data AdminUserDTO `json:"data"`
 }
 
 type AuthenticateAppUserResponse struct {
 	Data AppUserDTO `json:"data"`
-}
-
-type UpdateUserSavedAddressesResponse struct {
-	Data string `json:"data"`
 }
 
 type AdminUserDTO struct {
@@ -27,7 +18,7 @@ type AdminUserDTO struct {
 }
 
 type AppUserAddressBookDTO struct {
-	SavedAddresses []string `json:"savedAddresses"`
+	SavedAddresses map[string][]string `json:"savedAddresses"`
 }
 
 type AppUserDTO struct {

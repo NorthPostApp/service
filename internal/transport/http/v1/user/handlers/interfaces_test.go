@@ -36,6 +36,17 @@ func (m *mockUserRepo) UpdateUserSavedAddresses(
 	return args.Get(0).(string), args.Error(1)
 }
 
+func (m *mockUserRepo) GetUserSavedAddresses(
+	ctx context.Context,
+	opts *repository.GetUserSavedAddressesOptions,
+) ([]string, error) {
+	args := m.Called(ctx, opts)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]string), args.Error(1)
+}
+
 // --------- Mock Address Repo ----------
 type mockAddressRepo struct {
 	mock.Mock
@@ -43,7 +54,7 @@ type mockAddressRepo struct {
 
 func (m *mockAddressRepo) GetAddressesByIDs(
 	ctx context.Context,
-	opts repository.GetAddressesByIDsOptions,
+	opts *repository.GetAddressesByIDsOptions,
 ) (*repository.GetAddressesByIDsResponse, error) {
 	args := m.Called(ctx, opts)
 	if args.Get(0) == nil {
@@ -57,6 +68,15 @@ func mockAuthMiddleware(uid string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if uid != "" {
 			c.Set(middleware.UidKey, uid)
+		}
+		c.Next()
+	}
+}
+
+func mockLanguageMiddleware(language string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if language != "" {
+			c.Set(middleware.LanguageKey, language)
 		}
 		c.Next()
 	}

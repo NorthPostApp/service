@@ -14,11 +14,15 @@ type userRepository interface {
 		ctx context.Context,
 		opts *repository.UpdateUserSavedAddressesOptions,
 	) (string, error)
+	GetUserSavedAddresses(
+		ctx context.Context,
+		opts *repository.GetUserSavedAddressesOptions,
+	) ([]string, error)
 }
 
 type addressRepository interface {
 	GetAddressesByIDs(
 		ctx context.Context,
-		opts repository.GetAddressesByIDsOptions,
+		opts *repository.GetAddressesByIDsOptions,
 	) (*repository.GetAddressesByIDsResponse, error)
 }
