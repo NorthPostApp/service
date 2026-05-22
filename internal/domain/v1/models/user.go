@@ -20,5 +20,5 @@ type AppUser struct {
 }
 
 type AddressBook struct {
-	SavedAddresses map[string][]string `json:"savedAddresses" firestore:"savedAddresses"`
+	SavedAddresses map[Language][]string `json:"savedAddresses" firestore:"savedAddresses"`
 }
