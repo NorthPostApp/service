@@ -178,7 +178,8 @@ func (u *UserRepository) GetUserSavedAddresses(
 	if appUser.AddressBook == nil || appUser.AddressBook.SavedAddresses == nil {
 		return []string{}, nil
 	}
-	return appUser.AddressBook.SavedAddresses[opts.Language.Get()], nil
+	// parse the options' language to the model-compatible language format
+	return appUser.AddressBook.SavedAddresses[models.Language(opts.Language.Get())], nil
 }
 
 func (u *UserRepository) UpdateUserSavedAddresses(

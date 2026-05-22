@@ -18,7 +18,7 @@ type AdminUserDTO struct {
 }
 
 type AppUserAddressBookDTO struct {
-	SavedAddresses map[string][]string `json:"savedAddresses"`
+	SavedAddresses map[models.Language][]string `json:"savedAddresses"`
 }
 
 type AppUserDTO struct {
