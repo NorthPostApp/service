@@ -160,7 +160,7 @@ func (h *AddressBookHandler) CreateNewRequest(c *gin.Context) {
 		RequestIDs: []string{newRequestID},
 		Action:     repository.Add,
 	}
-	output, err := h.userRepo.UpdateUserAddressRequests(c.Request.Context(), updateUserRequestsOpts)
+	_, err = h.userRepo.UpdateUserAddressRequests(c.Request.Context(), updateUserRequestsOpts)
 	if err != nil {
 		h.logger.Error("failed to add address request to user's address book",
 			"path", "user/handlers/address_book/CreateNewRequest",
@@ -169,7 +169,7 @@ func (h *AddressBookHandler) CreateNewRequest(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, dto.CreateNewRequestResponse{Data: output})
+	c.JSON(http.StatusOK, dto.CreateNewRequestResponse{Data: newRequestID})
 }
 
 // ---------- Helper methods ----------

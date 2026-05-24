@@ -17,8 +17,8 @@ type GetSavedAddressesResponse struct {
 }
 
 type CreateNewRequest struct {
-	Language models.Language
-	Content  string
+	Language models.Language `json:"language"`
+	Content  string          `json:"content"`
 }
 
 type CreateNewRequestResponse struct {

@@ -53,7 +53,6 @@ func (r *AddressRequestRepository) CreateNewRequest(
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	fmt.Printf("%+v\n", newAddressRequest)
 	_, err := docRef.Set(ctx, newAddressRequest)
 	if err != nil {
 		r.logger.Error("failed to create address request",
@@ -85,7 +84,7 @@ func (r *AddressRequestRepository) DeleteRequests(
 		// use jobs to record the deletion result
 		jobs := make([]bulkWriteJob, end-start)
 
-		for _, id := range opts.RequestIDs[start:end] {
+		for i, id := range opts.RequestIDs[start:end] {
 			docRef := collectionRef.Doc(id)
 			job, err := bulkWriter.Delete(docRef)
 			if err != nil {
@@ -98,10 +97,9 @@ func (r *AddressRequestRepository) DeleteRequests(
 				bulkWriter.End()
 				return fmt.Errorf("Failed to enqueue address request delete: %w", err)
 			}
-			jobs = append(jobs, bulkWriteJob{id, job})
+			jobs[i] = bulkWriteJob{id, job}
 		}
 		bulkWriter.Flush() // this action blocks execution
-		// TODO: iterate through jobs and log warning when problem happened. No need to
 		for _, j := range jobs {
 			if _, err := j.job.Results(); err != nil {
 				r.logger.Warn("failed to delete address request",
