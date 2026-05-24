@@ -37,7 +37,7 @@ func (h *UserHandler) AuthenticateAppUser(c *gin.Context) {
 	if !validateUser(c, uid, h.logger) {
 		return
 	}
-	opts := repository.GetUserByIdOptions{Uid: uid}
+	opts := &repository.GetUserByIdOptions{Uid: uid}
 	output, err := h.repo.AuthenticateAppUserById(c.Request.Context(), opts)
 	if err != nil {
 		h.logger.Error("failed to authenticate app user", "error", err)

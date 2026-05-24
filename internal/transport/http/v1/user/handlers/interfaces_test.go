@@ -17,7 +17,7 @@ type mockUserRepo struct {
 
 func (m *mockUserRepo) AuthenticateAppUserById(
 	ctx context.Context,
-	opts repository.GetUserByIdOptions) (*models.AppUser, error) {
+	opts *repository.GetUserByIdOptions) (*models.AppUser, error) {
 	args := m.Called(ctx, opts)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -47,6 +47,17 @@ func (m *mockUserRepo) GetUserSavedAddresses(
 	return args.Get(0).([]string), args.Error(1)
 }
 
+func (m *mockUserRepo) UpdateUserAddressRequests(
+	ctx context.Context,
+	opts *repository.UpdateUserAddressRequestsOptions,
+) (string, error) {
+	args := m.Called(ctx, opts)
+	if args.Get(0) == nil {
+		return "", args.Error(1)
+	}
+	return args.Get(0).(string), args.Error(1)
+}
+
 // --------- Mock Address Repo ----------
 type mockAddressRepo struct {
 	mock.Mock
@@ -61,6 +72,28 @@ func (m *mockAddressRepo) GetAddressesByIDs(
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*repository.GetAddressesByIDsResponse), args.Error(1)
+}
+
+// --------- Mock Address Request Repo ----------
+type mockAddressRequestRepo struct {
+	mock.Mock
+}
+
+func (m *mockAddressRequestRepo) CreateNewRequest(
+	ctx context.Context,
+	opts *repository.CreateRequestOptions) (string, error) {
+	args := m.Called(ctx, opts)
+	if args.Get(0) == nil {
+		return "", args.Error(1)
+	}
+	return args.Get(0).(string), args.Error(1)
+}
+
+func (m *mockAddressRequestRepo) DeleteRequests(
+	ctx context.Context,
+	opts *repository.DeleteRequestsOptions) error {
+	args := m.Called(ctx, opts)
+	return args.Error(1)
 }
 
 // --------- Mock Utils ----------

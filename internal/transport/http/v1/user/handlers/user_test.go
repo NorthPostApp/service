@@ -68,7 +68,7 @@ func TestAuthenticateAppUser(t *testing.T) {
 			handler := NewUserHandler(mockRepo, slog.Default())
 			router := setupUserRouter(handler, tt.uid)
 			if tt.expectCall {
-				opts := repository.GetUserByIdOptions{Uid: tt.uid}
+				opts := &repository.GetUserByIdOptions{Uid: tt.uid}
 				mockRepo.On("AuthenticateAppUserById", mock.Anything, opts).
 					Return(tt.mockOutput, tt.mockError).Once()
 			}

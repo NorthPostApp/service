@@ -28,7 +28,7 @@ func NewFirebaseClient(logger *slog.Logger) (*FirebaseClient, error) {
 	var opts []option.ClientOption
 	if credentialsPath != "" {
 		logger.Info("initializing firebase client using credentials file")
-		opts = append(opts, option.WithCredentialsFile(credentialsPath))
+		opts = append(opts, option.WithAuthCredentialsFile(option.ServiceAccount, credentialsPath))
 	} else {
 		logger.Info("initializing firebase using application default credentials")
 	}

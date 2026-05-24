@@ -15,3 +15,12 @@ type UpdateUserSavedAddressesResponse struct {
 type GetSavedAddressesResponse struct {
 	Data []AddressItemDTO `json:"data"`
 }
+
+type CreateNewRequest struct {
+	Language models.Language
+	Content  string
+}
+
+type CreateNewRequestResponse struct {
+	Data string
+}
