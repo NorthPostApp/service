@@ -227,7 +227,7 @@ func TestCreateNewRequest(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, w.Code)
 			resp := w.Body.String()
 			if tt.expectUpdateRequestCall && tt.mockUpdateUserRequestError == nil {
-				assert.Contains(t, resp, tt.mockUpdateUserRequestOutput)
+				assert.Contains(t, resp, tt.mockCreateRequestOutput)
 			}
 		})
 	}
