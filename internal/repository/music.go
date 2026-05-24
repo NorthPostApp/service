@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"math"
 	"north-post/service/internal/domain/v1/models"
+	"north-post/service/internal/infra"
 	"strings"
 	"time"
 
@@ -28,15 +29,14 @@ type MusicRepository struct {
 }
 
 func NewMusicRepository(
-	client *s3.Client,
-	presignedClient *s3.PresignClient,
-	firestoreClient *firestore.Client,
+	storageBucketClient *infra.StorageBucketClient,
+	firebaseClient *infra.FirebaseClient,
 	logger *slog.Logger,
 ) *MusicRepository {
 	return &MusicRepository{
-		client:          client,
-		presignedClient: presignedClient,
-		firestoreClient: firestoreClient,
+		client:          storageBucketClient.R2Storage,
+		presignedClient: storageBucketClient.R2Presigned,
+		firestoreClient: firebaseClient.Firestore,
 		logger:          logger,
 	}
 }

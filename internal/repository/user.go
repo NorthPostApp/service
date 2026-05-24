@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+
+	"firebase.google.com/go/v4/auth"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -18,22 +20,24 @@ const (
 	appUserTable   = "app_users"
 )
 
-type UpdateSavedAddressesAction int
+type UpdateAddressBookAction int
 
 const (
-	Add UpdateSavedAddressesAction = iota
+	Add UpdateAddressBookAction = iota
 	Delete
 )
 
 type UserRepository struct {
-	client *infra.FirebaseClient
-	logger *slog.Logger
+	firestoreClient *firestore.Client
+	authClient      *auth.Client
+	logger          *slog.Logger
 }
 
 func NewUserRepository(client *infra.FirebaseClient, logger *slog.Logger) *UserRepository {
 	return &UserRepository{
-		client: client,
-		logger: logger,
+		firestoreClient: client.Firestore,
+		authClient:      client.Auth,
+		logger:          logger,
 	}
 }
 
@@ -50,14 +54,21 @@ type UpdateUserSavedAddressesOptions struct {
 	Language   models.Language
 	UserID     string
 	AddressIDs []string
-	Action     UpdateSavedAddressesAction
+	Action     UpdateAddressBookAction
+}
+
+type UpdateUserAddressRequestsOptions struct {
+	Language   models.Language
+	UserID     string
+	RequestIDs []string
+	Action     UpdateAddressBookAction
 }
 
 /* ---- Admin user repository ---- */
 
 func (u *UserRepository) SignInAdminUserById(ctx context.Context, opts GetUserByIdOptions) (*models.AdminUser, error) {
 	tableName := adminUserTable
-	docRef := u.client.Firestore.Collection(tableName).Doc(opts.Uid)
+	docRef := u.firestoreClient.Collection(tableName).Doc(opts.Uid)
 	// get document
 	doc, err := docRef.Get(ctx)
 	if err != nil {
@@ -86,9 +97,9 @@ func (u *UserRepository) SignInAdminUserById(ctx context.Context, opts GetUserBy
 
 func (u *UserRepository) AuthenticateAppUserById(
 	ctx context.Context,
-	opts GetUserByIdOptions) (*models.AppUser, error) {
+	opts *GetUserByIdOptions) (*models.AppUser, error) {
 	tableName := appUserTable
-	docRef := u.client.Firestore.Collection(tableName).Doc(opts.Uid)
+	docRef := u.firestoreClient.Collection(tableName).Doc(opts.Uid)
 	// get user document
 	doc, err := docRef.Get(ctx)
 	// if user not found, create a new user
@@ -130,7 +141,7 @@ func (u *UserRepository) AuthenticateAppUserById(
 func (u *UserRepository) CreateAppUser(
 	ctx context.Context,
 	uid string) (*models.AppUser, error) {
-	userRecord, err := u.client.Auth.GetUser(ctx, uid)
+	userRecord, err := u.authClient.GetUser(ctx, uid)
 	if err != nil {
 		u.logger.Error("failed to retrieve user info from auth service", "uid", uid, "error", err)
 		return nil, fmt.Errorf("failed to retrieve user info from auth service: %w", err)
@@ -158,7 +169,7 @@ func (u *UserRepository) GetUserSavedAddresses(
 	opts *GetUserSavedAddressesOptions,
 ) ([]string, error) {
 	tableName := appUserTable
-	docRef := u.client.Firestore.Collection(tableName).Doc(opts.Uid)
+	docRef := u.firestoreClient.Collection(tableName).Doc(opts.Uid)
 	doc, err := docRef.Get(ctx)
 	if err != nil {
 		u.logger.Error("failed to get app user document",
@@ -187,7 +198,7 @@ func (u *UserRepository) UpdateUserSavedAddresses(
 	opts *UpdateUserSavedAddressesOptions,
 ) (string, error) {
 	tableName := appUserTable
-	docRef := u.client.Firestore.Collection(tableName).Doc(opts.UserID)
+	docRef := u.firestoreClient.Collection(tableName).Doc(opts.UserID)
 	var updateValue any
 	ids := make([]interface{}, len(opts.AddressIDs))
 	for i, v := range opts.AddressIDs {
@@ -199,6 +210,10 @@ func (u *UserRepository) UpdateUserSavedAddresses(
 	case Delete:
 		updateValue = firestore.ArrayRemove(ids...)
 	default:
+		u.logger.Error("unsupported update action",
+			"path", "repository.user.UpdateUserSavedAddress",
+			"action", opts.Action,
+		)
 		return "", fmt.Errorf("unsupported update action")
 	}
 	result, err := docRef.Update(ctx, []firestore.Update{
@@ -211,6 +226,45 @@ func (u *UserRepository) UpdateUserSavedAddresses(
 			"language", opts.Language,
 			"error", err)
 		return "", fmt.Errorf("failed to update saved addresses: %w", err)
+	}
+	return fmt.Sprintf("%d", result.UpdateTime.UnixMilli()), nil
+}
+
+func (u *UserRepository) UpdateUserAddressRequests(
+	ctx context.Context,
+	opts *UpdateUserAddressRequestsOptions,
+) (string, error) {
+	tableName := appUserTable
+	docRef := u.firestoreClient.Collection(tableName).Doc(opts.UserID)
+	var updateValue any
+	ids := make([]interface{}, len(opts.RequestIDs))
+	for i, v := range opts.RequestIDs {
+		ids[i] = v
+	}
+	switch opts.Action {
+	case Add:
+		updateValue = firestore.ArrayUnion(ids...)
+	case Delete:
+		updateValue = firestore.ArrayRemove(ids...)
+	default:
+		u.logger.Error("unsupported update action",
+			"path", "repository.user.UpdateUserAddressRequest",
+			"action", opts.Action,
+		)
+		return "", fmt.Errorf("unsupported update action")
+	}
+	result, err := docRef.Update(ctx, []firestore.Update{
+		{Path: fmt.Sprintf("addressBook.requests.%s", opts.Language.Get()), Value: updateValue},
+	})
+	if err != nil {
+		u.logger.Error(
+			"failed to update requests",
+			"path", "repository.user.UpdateUserAddressRequest",
+			"uid", opts.UserID,
+			"language", opts.Language,
+			"error", err,
+		)
+		return "", fmt.Errorf("failed to update requests: %w", err)
 	}
 	return fmt.Sprintf("%d", result.UpdateTime.UnixMilli()), nil
 }

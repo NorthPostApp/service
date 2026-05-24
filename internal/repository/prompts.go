@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"north-post/service/internal/domain/v1/models"
+	"north-post/service/internal/infra"
 
 	"cloud.google.com/go/firestore"
 )
@@ -19,9 +20,9 @@ type PromptRepository struct {
 	logger *slog.Logger
 }
 
-func NewPromptRepository(client *firestore.Client, logger *slog.Logger) *PromptRepository {
+func NewPromptRepository(client *infra.FirebaseClient, logger *slog.Logger) *PromptRepository {
 	return &PromptRepository{
-		client: client,
+		client: client.Firestore,
 		logger: logger,
 	}
 }

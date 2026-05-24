@@ -94,42 +94,33 @@ func main() {
 		log.Fatalf("failed to initialize llm client %v", err)
 	}
 
-	// Address service
-	addressRepo := repository.NewAddressRepository(
-		firebaseClient.Firestore,
-		typesenseClient,
-		logger)
+	// Repositories
+	addressRepo := repository.NewAddressRepository(firebaseClient, typesenseClient, logger)
+	promptRepo := repository.NewPromptRepository(firebaseClient, logger)
+	userRepo := repository.NewUserRepository(firebaseClient, logger)
+	musicRepo := repository.NewMusicRepository(storageBucketClient, firebaseClient, logger)
+	addressRequestRepo := repository.NewAddressRequestRepository(firebaseClient, logger)
+
+	// Services
 	addressService := services.NewAddressService(addressRepo, llmClient)
+	promptService := services.NewPromptService(promptRepo)
+	userService := services.NewUserService(userRepo)
+	musicService := services.NewMusicService(musicRepo)
+
+	// Handlers
 	adminAddressHandler := adminHandlers.NewAddressHandler(addressService, logger)
 	userAddressHandler := userHandlers.NewAddressHandler(addressService, logger)
+	adminTypesenseHandler := adminHandlers.NewTypesenseHandler(typesenseClient, logger)
 
-	// Prompt service
-	promptRepo := repository.NewPromptRepository(firebaseClient.Firestore, logger)
-	promptService := services.NewPromptService(promptRepo)
 	promptHandler := adminHandlers.NewPromptHandler(promptService, logger)
 
-	// User data service
-	userRepo := repository.NewUserRepository(firebaseClient, logger)
-	userService := services.NewUserService(userRepo)
 	adminUserDataHandler := adminHandlers.NewUserHandler(userService, logger)
 	appUserDataHandler := userHandlers.NewUserHandler(userRepo, logger)
 
-	// Music service
-	musicRepo := repository.NewMusicRepository(
-		storageBucketClient.R2Storage,
-		storageBucketClient.R2Presigned,
-		firebaseClient.Firestore,
-		logger,
-	)
-	musicService := services.NewMusicService(musicRepo)
 	adminMusicHandler := adminHandlers.NewMusicHandler(musicService, logger)
 	userMusicHandler := userHandlers.NewMusicHandler(musicService, logger)
 
-	// Typesense handler
-	adminTypesenseHandler := adminHandlers.NewTypesenseHandler(typesenseClient, logger)
-
-	// User Address Book
-	userAddressBookHandler := userHandlers.NewAddressBookHandler(userRepo, addressRepo, logger)
+	userAddressBookHandler := userHandlers.NewAddressBookHandler(userRepo, addressRepo, addressRequestRepo, logger)
 
 	// Setup routers
 	router := gin.Default()

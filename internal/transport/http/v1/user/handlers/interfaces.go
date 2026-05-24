@@ -9,7 +9,7 @@ import (
 type userRepository interface {
 	AuthenticateAppUserById(
 		ctx context.Context,
-		opts repository.GetUserByIdOptions) (*models.AppUser, error)
+		opts *repository.GetUserByIdOptions) (*models.AppUser, error)
 	UpdateUserSavedAddresses(
 		ctx context.Context,
 		opts *repository.UpdateUserSavedAddressesOptions,
@@ -18,6 +18,19 @@ type userRepository interface {
 		ctx context.Context,
 		opts *repository.GetUserSavedAddressesOptions,
 	) ([]string, error)
+	UpdateUserAddressRequests(
+		ctx context.Context,
+		opts *repository.UpdateUserAddressRequestsOptions,
+	) (string, error)
+}
+
+type addressRequestRepository interface {
+	CreateNewRequest(
+		ctx context.Context,
+		opts *repository.CreateRequestOptions) (string, error)
+	DeleteRequests(
+		ctx context.Context,
+		opts *repository.DeleteRequestsOptions) error
 }
 
 type addressRepository interface {

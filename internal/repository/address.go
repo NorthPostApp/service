@@ -29,9 +29,9 @@ type AddressRepository struct {
 	logger    *slog.Logger
 }
 
-func NewAddressRepository(client *firestore.Client, typesense *infra.TypesenseClient, logger *slog.Logger) *AddressRepository {
+func NewAddressRepository(client *infra.FirebaseClient, typesense *infra.TypesenseClient, logger *slog.Logger) *AddressRepository {
 	return &AddressRepository{
-		client:    client,
+		client:    client.Firestore,
 		typesense: typesense,
 		logger:    logger,
 	}

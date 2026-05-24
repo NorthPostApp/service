@@ -16,19 +16,22 @@ import (
 )
 
 type AddressBookHandler struct {
-	userRepo    userRepository
-	addressRepo addressRepository
-	logger      *slog.Logger
+	userRepo           userRepository
+	addressRepo        addressRepository
+	addressRequestRepo addressRequestRepository
+	logger             *slog.Logger
 }
 
 func NewAddressBookHandler(
 	userRepo userRepository,
 	addressRepo addressRepository,
+	addressRequestRepo addressRequestRepository,
 	logger *slog.Logger) *AddressBookHandler {
 	return &AddressBookHandler{
-		userRepo:    userRepo,
-		addressRepo: addressRepo,
-		logger:      logger,
+		userRepo:           userRepo,
+		addressRepo:        addressRepo,
+		addressRequestRepo: addressRequestRepo,
+		logger:             logger,
 	}
 }
 
@@ -113,8 +116,64 @@ func (h *AddressBookHandler) GetSavedAddresses(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// CreateNewRequest godoc
+// @Summary Create a new address request
+// @Description Create a new address request and add it to the user's address book requests
+// @Tags App User
+// @Param Authorization header string true "Bearer idToken"
+// @Param request body dto.CreateNewRequest true "New address request payload"
+// @Produce json
+// @Success 200 {object} dto.CreateNewRequestResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /user/address-book/request [post]
+func (h *AddressBookHandler) CreateNewRequest(c *gin.Context) {
+	uid := c.GetString(middleware.UidKey)
+	language := models.Language(c.GetString(middleware.LanguageKey))
+	if !validateUser(c, uid, h.logger) {
+		return
+	}
+	var req dto.CreateNewRequest
+	if !utils.BindJSON(c, &req, h.logger) {
+		return
+	}
+	// create new request
+	createRequestOpts := &repository.CreateRequestOptions{
+		Language: language,
+		UID:      uid,
+		Content:  req.Content,
+	}
+	newRequestID, err := h.addressRequestRepo.CreateNewRequest(c.Request.Context(), createRequestOpts)
+	if err != nil {
+		h.logger.Error("failed to create address request",
+			"path", "user/handlers/address_book/CreateNewRequest",
+			"error", err,
+		)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+	// add the id to user's address book request
+	updateUserRequestsOpts := &repository.UpdateUserAddressRequestsOptions{
+		Language:   language,
+		UserID:     uid,
+		RequestIDs: []string{newRequestID},
+		Action:     repository.Add,
+	}
+	_, err = h.userRepo.UpdateUserAddressRequests(c.Request.Context(), updateUserRequestsOpts)
+	if err != nil {
+		h.logger.Error("failed to add address request to user's address book",
+			"path", "user/handlers/address_book/CreateNewRequest",
+			"error", err,
+		)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, dto.CreateNewRequestResponse{Data: newRequestID})
+}
+
 // ---------- Helper methods ----------
-func (h *AddressBookHandler) convertUpdateMethod(action string) repository.UpdateSavedAddressesAction {
+func (h *AddressBookHandler) convertUpdateMethod(action string) repository.UpdateAddressBookAction {
 	action = strings.ToLower(action)
 	switch action {
 	case "add":
