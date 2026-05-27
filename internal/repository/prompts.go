@@ -37,19 +37,25 @@ type GetSystemAddressGenerationPromptOptions struct {
 }
 
 // get prompt by language and key
-func (r *PromptRepository) GetSystemPrompt(ctx context.Context, opts GetSystemPromptOptions) (string, error) {
+func (r *PromptRepository) GetSystemPrompt(
+	ctx context.Context, opts GetSystemPromptOptions) (string, error) {
+	logger := r.logger.With(
+		"path", "repository.prompts.GetSystemPrompt",
+		"key", opts.Key,
+		"language", opts.Language,
+	)
 	language := opts.Language
 	key := opts.Key
 	docRef := r.client.Collection(promptTable).Doc(getPromptLanguage(language))
 	doc, err := docRef.Get(ctx)
 	if err != nil {
-		r.logger.Error("failed to get prompt", "language", language)
+		logger.Error("failed to get prompt", "error", err)
 		return "", fmt.Errorf("failed to get prompt")
 	}
 	data := doc.Data()
 	prompt, ok := data[key].(string)
 	if !ok {
-		r.logger.Warn("prompt key missing or not a string", "language", language, "key", key)
+		logger.Warn("prompt key missing or not a string")
 		return "", fmt.Errorf("prompt key missing or not a string")
 	}
 	return prompt, nil
