@@ -176,6 +176,7 @@ func (u *UserRepository) GetUserSavedAddresses(
 	// if not found, create a doc
 	if status.Code(err) == codes.NotFound {
 		err = createFirestorePath(ctx, docRef, models.SavedAddresses{IDs: []string{}})
+		return []string{}, nil
 	}
 	if err != nil {
 		u.logger.Error("failed to get app user document",
@@ -292,12 +293,11 @@ func (u *UserRepository) UpdateUserAddressRequests(
 			"path", "repository.user.UpdateUserAddressRequest",
 			"uid", opts.UserID,
 			"language", opts.Language,
-			"error", err,
 		)
 		return "", fmt.Errorf("unsupported update action")
 	}
 	result, err := docRef.Update(ctx, []firestore.Update{
-		{Path: savedAddressesIDsPath, Value: updateValue},
+		{Path: requestIDsPath, Value: updateValue},
 	})
 	if err != nil {
 		u.logger.Error(
