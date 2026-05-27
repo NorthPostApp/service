@@ -38,7 +38,7 @@ type GetSystemAddressGenerationPromptOptions struct {
 
 // get prompt by language and key
 func (r *PromptRepository) GetSystemPrompt(
-	ctx context.Context, opts GetSystemPromptOptions) (string, error) {
+	ctx context.Context, opts *GetSystemPromptOptions) (string, error) {
 	logger := r.logger.With(
 		"path", "repository.prompts.GetSystemPrompt",
 		"key", opts.Key,
@@ -64,8 +64,8 @@ func (r *PromptRepository) GetSystemPrompt(
 // get address generation system prompt
 func (r *PromptRepository) GetSystemAddressGenerationPrompt(
 	ctx context.Context,
-	opts GetSystemAddressGenerationPromptOptions) (string, error) {
-	getPromptOpts := GetSystemPromptOptions{
+	opts *GetSystemAddressGenerationPromptOptions) (string, error) {
+	getPromptOpts := &GetSystemPromptOptions{
 		Language: opts.Language,
 		Key:      addressGenerationKey,
 	}

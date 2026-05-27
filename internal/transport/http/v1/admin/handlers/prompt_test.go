@@ -6,8 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"north-post/service/internal/domain/v1/models"
-	"north-post/service/internal/services"
+	"north-post/service/internal/repository"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -16,13 +15,15 @@ import (
 )
 
 // MockPromptService for testing
-type MockPromptService struct {
+type MockPromptRepository struct {
 	mock.Mock
 }
 
-func (m *MockPromptService) GetSystemAddressGenerationPrompt(ctx context.Context, input services.GetSystemAddressGenerationPromptInput) (*services.GetSystemAddressGenerationPromptOutput, error) {
-	args := m.Called(ctx, input)
-	return args.Get(0).(*services.GetSystemAddressGenerationPromptOutput), args.Error(1)
+func (m *MockPromptRepository) GetSystemAddressGenerationPrompt(
+	ctx context.Context,
+	opts *repository.GetSystemAddressGenerationPromptOptions) (string, error) {
+	args := m.Called(ctx, opts)
+	return args.Get(0).(string), args.Error(1)
 }
 
 func TestPromptHandler_GetSystemAddressGenerationPrompt(t *testing.T) {
@@ -30,7 +31,7 @@ func TestPromptHandler_GetSystemAddressGenerationPrompt(t *testing.T) {
 	tests := []struct {
 		name           string
 		language       string
-		mockOutput     *services.GetSystemAddressGenerationPromptOutput
+		mockOutput     string
 		mockError      error
 		expectedStatus int
 		expectedBody   string
@@ -38,7 +39,7 @@ func TestPromptHandler_GetSystemAddressGenerationPrompt(t *testing.T) {
 		{
 			name:           "success",
 			language:       "en",
-			mockOutput:     &services.GetSystemAddressGenerationPromptOutput{Prompt: "test prompt"},
+			mockOutput:     "test prompt",
 			mockError:      nil,
 			expectedStatus: http.StatusOK,
 			expectedBody:   `{"data":"test prompt"}`,
@@ -46,7 +47,7 @@ func TestPromptHandler_GetSystemAddressGenerationPrompt(t *testing.T) {
 		{
 			name:           "service error",
 			language:       "en",
-			mockOutput:     nil,
+			mockOutput:     "",
 			mockError:      errors.New("service error"),
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   `{"error":"service error"}`,
@@ -54,13 +55,13 @@ func TestPromptHandler_GetSystemAddressGenerationPrompt(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockService := new(MockPromptService)
+			mockService := new(MockPromptRepository)
 			logger := slog.Default()
 			handler := NewPromptHandler(mockService, logger)
 			mockService.On(
 				"GetSystemAddressGenerationPrompt",
 				mock.Anything,
-				services.GetSystemAddressGenerationPromptInput{Language: models.Language(tt.language)},
+				mock.Anything,
 			).Return(tt.mockOutput, tt.mockError)
 			r := gin.New()
 			r.GET("/admin/prompt/system/address", handler.GetSystemAddressGenerationPrompt)

@@ -103,7 +103,6 @@ func main() {
 
 	// Services
 	addressService := services.NewAddressService(addressRepo, llmClient)
-	promptService := services.NewPromptService(promptRepo)
 	userService := services.NewUserService(userRepo)
 	musicService := services.NewMusicService(musicRepo)
 
@@ -112,7 +111,7 @@ func main() {
 	userAddressHandler := userHandlers.NewAddressHandler(addressService, logger)
 	adminTypesenseHandler := adminHandlers.NewTypesenseHandler(typesenseClient, logger)
 
-	promptHandler := adminHandlers.NewPromptHandler(promptService, logger)
+	promptHandler := adminHandlers.NewPromptHandler(promptRepo, logger)
 
 	adminUserDataHandler := adminHandlers.NewUserHandler(userService, logger)
 	appUserDataHandler := userHandlers.NewUserHandler(userRepo, logger)
