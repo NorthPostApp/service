@@ -156,9 +156,12 @@ func (u *UserRepository) AuthenticateAppUserById(
 func (u *UserRepository) CreateAppUser(
 	ctx context.Context,
 	uid string) (*models.AppUser, error) {
+	logger := u.logger.With(
+		"path", "repository.user.CreateAppUser",
+	)
 	userRecord, err := u.authClient.GetUser(ctx, uid)
 	if err != nil {
-		u.logger.Error("failed to retrieve user info from auth service", "uid", uid, "error", err)
+		logger.Error("failed to retrieve user info from auth service", "uid", uid, "error", err)
 		return nil, fmt.Errorf("failed to retrieve user info from auth service: %w", err)
 	}
 	now := time.Now().UnixMilli()
@@ -299,7 +302,7 @@ func (u *UserRepository) UpdateUserAddressRequests(
 	case Delete:
 		updateValue = firestore.ArrayRemove(ids...)
 	default:
-		u.logger.Error("unsupported update action")
+		logger.Error("unsupported update action")
 		return "", fmt.Errorf("unsupported update action")
 	}
 	result, err := docRef.Update(ctx, []firestore.Update{
