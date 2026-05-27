@@ -203,6 +203,7 @@ func (r *MusicRepository) updateMusicList(ctx context.Context, musicList []model
 		}
 	}
 	bulkWriter.Flush()
+	bulkWriter.End()
 	logger.Info("Music list refresh completed: ", "added", filesAdded, "updated", filesUpdated, "deleted", filesDeleted)
 	return nil
 }
