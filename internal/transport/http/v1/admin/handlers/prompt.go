@@ -5,25 +5,27 @@ import (
 	"log/slog"
 	"net/http"
 	"north-post/service/internal/domain/v1/models"
-	"north-post/service/internal/services"
+	"north-post/service/internal/repository"
 	"north-post/service/internal/transport/http/v1/dto"
 
 	"github.com/gin-gonic/gin"
 )
 
-type promptService interface {
-	GetSystemAddressGenerationPrompt(ctx context.Context, input services.GetSystemAddressGenerationPromptInput) (*services.GetSystemAddressGenerationPromptOutput, error)
+type promptRepository interface {
+	GetSystemAddressGenerationPrompt(
+		ctx context.Context,
+		opts *repository.GetSystemAddressGenerationPromptOptions) (string, error)
 }
 
 type PromptHandler struct {
-	service promptService
-	logger  *slog.Logger
+	repo   promptRepository
+	logger *slog.Logger
 }
 
-func NewPromptHandler(service promptService, logger *slog.Logger) *PromptHandler {
+func NewPromptHandler(repo promptRepository, logger *slog.Logger) *PromptHandler {
 	return &PromptHandler{
-		service: service,
-		logger:  logger,
+		repo:   repo,
+		logger: logger,
 	}
 }
 
@@ -41,17 +43,17 @@ func (h *PromptHandler) GetSystemAddressGenerationPrompt(c *gin.Context) {
 	languageStr := c.Query("language")
 	// we can skip language validation here because we've set fallback
 	// language as en in the prompt repository
-	opts := services.GetSystemAddressGenerationPromptInput{
+	opts := &repository.GetSystemAddressGenerationPromptOptions{
 		Language: models.Language(languageStr),
 	}
-	prompt, err := h.service.GetSystemAddressGenerationPrompt(c.Request.Context(), opts)
+	prompt, err := h.repo.GetSystemAddressGenerationPrompt(c.Request.Context(), opts)
 	if err != nil {
 		h.logger.Error("failed to get system address generation prompt", "error", err)
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
 	response := dto.GetSystemAddressGenerationPromptResponse{
-		Data: prompt.Prompt,
+		Data: prompt,
 	}
 	c.JSON(http.StatusOK, response)
 }

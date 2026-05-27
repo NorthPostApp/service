@@ -61,12 +61,16 @@ type GetAllMusicListResponse struct {
 func (r *MusicRepository) GetPresignedMusicURL(
 	ctx context.Context,
 	opts GetPresignedMusicURLOptions) (*GetPresignedMusicURLResponse, error) {
+	logger := r.logger.With(
+		"path", "repository.music.GetPresignedMusicURL",
+		"filename", opts.Filename,
+	)
 	request, err := r.presignedClient.PresignGetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(musicBucketName),
 		Key:    aws.String(opts.Filename),
 	}, s3.WithPresignExpires(15*time.Minute))
 	if err != nil {
-		r.logger.Error("failed to get music url", "error", err)
+		logger.Error("failed to get music url", "error", err)
 		return nil, fmt.Errorf("failed to get music url: %w", err)
 	}
 	return &GetPresignedMusicURLResponse{URL: request.URL}, nil
@@ -76,6 +80,9 @@ func (r *MusicRepository) GetPresignedMusicURL(
 // but in the future, if the music list have over 100 songs, pagination is required
 func (r *MusicRepository) GetAllMusicList(
 	ctx context.Context) (*GetAllMusicListResponse, error) {
+	logger := r.logger.With(
+		"path", "repository.music.GetAllMusicList",
+	)
 	iter := r.firestoreClient.Collection(musicCollectionName).Documents(ctx)
 	defer iter.Stop()
 	var musicList []models.Music
@@ -85,18 +92,12 @@ func (r *MusicRepository) GetAllMusicList(
 			break
 		}
 		if err != nil {
-			r.logger.Error(
-				"failed to iterate music documents",
-				"error", err,
-			)
+			logger.Error("failed to iterate music documents", "error", err)
 			return nil, fmt.Errorf("failed to iterate music documents: %w", err)
 		}
 		var music models.Music
 		if err := doc.DataTo(&music); err != nil {
-			r.logger.Error(
-				"failed to parse music document",
-				"error", err,
-			)
+			logger.Error("failed to parse music document", "error", err)
 			continue
 		}
 		musicList = append(musicList, music)
@@ -107,6 +108,9 @@ func (r *MusicRepository) GetAllMusicList(
 // Refresh he music list and store it in the database
 func (r *MusicRepository) RefreshMusicList(
 	ctx context.Context) (*RefreshMusicListResponse, error) {
+	logger := r.logger.With(
+		"path", "repository.music.RefreshMusicList",
+	)
 	var musicList []models.Music
 	paginator := s3.NewListObjectsV2Paginator(r.client, &s3.ListObjectsV2Input{
 		Bucket: aws.String(musicBucketName),
@@ -114,7 +118,7 @@ func (r *MusicRepository) RefreshMusicList(
 	for paginator.HasMorePages() {
 		page, err := paginator.NextPage(ctx)
 		if err != nil {
-			r.logger.Error("failed to list bucket objects", "error", err)
+			logger.Error("failed to list bucket objects", "error", err)
 			return nil, fmt.Errorf("failed to list bucket objects: %w", err)
 		}
 
@@ -131,7 +135,7 @@ func (r *MusicRepository) RefreshMusicList(
 				Filename:     key,
 				Title:        title,
 				Genre:        genre,
-				Size:         roundFilesize(fileSize, 2),
+				Size:         roundFileSize(fileSize, 2),
 				LastModified: lastModified,
 				DurationSec:  -1, // default unset, will update when user plays it the first time
 			})
@@ -145,6 +149,9 @@ func (r *MusicRepository) RefreshMusicList(
 }
 
 func (r *MusicRepository) updateMusicList(ctx context.Context, musicList []models.Music) error {
+	logger := r.logger.With(
+		"path", "repository.music.updateMusicList",
+	)
 	identifierFields := []string{"size", "lastModified"}
 	type identifier struct {
 		Size         float64 `firestore:"size"`
@@ -155,19 +162,17 @@ func (r *MusicRepository) updateMusicList(ctx context.Context, musicList []model
 	// fetch existing doc IDs only (with only size and lastModifies parts as identifiers)
 	existingDocs, err := collection.Select(identifierFields...).Documents(ctx).GetAll()
 	if err != nil {
-		r.logger.Error("failed to get existing music documents", "error", err)
+		logger.Error("failed to get existing music documents", "error", err)
 		return fmt.Errorf("failed to get existing music documents: %w", err)
 	}
 	existingDocsData := make(map[string]identifier, len(existingDocs))
 	for _, doc := range existingDocs {
 		var tempData identifier
 		if err := doc.DataTo(&tempData); err != nil {
-			r.logger.Error(
+			logger.Error(
 				"failed to decode music document",
-				"docID",
-				doc.Ref.ID,
-				"error",
-				err,
+				"docID", doc.Ref.ID,
+				"error", err,
 			)
 			continue
 		}
@@ -198,7 +203,8 @@ func (r *MusicRepository) updateMusicList(ctx context.Context, musicList []model
 		}
 	}
 	bulkWriter.Flush()
-	r.logger.Info("Music list refresh completed: ", "added", filesAdded, "updated", filesUpdated, "deleted", filesDeleted)
+	bulkWriter.End()
+	logger.Info("Music list refresh completed: ", "added", filesAdded, "updated", filesUpdated, "deleted", filesDeleted)
 	return nil
 }
 
@@ -219,7 +225,7 @@ func getDocId(genre string, title string) string {
 	return fmt.Sprintf("%s_%s", genre, title)
 }
 
-func roundFilesize(size float64, precision uint) float64 {
+func roundFileSize(size float64, precision uint) float64 {
 	factor := math.Pow(10, float64(precision))
 	return math.Round(size*factor) / factor
 }

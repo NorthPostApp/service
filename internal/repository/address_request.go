@@ -53,6 +53,10 @@ type GetAddressRequestsOptions struct {
 func (r *AddressRequestRepository) CreateNewRequest(
 	ctx context.Context, opts *CreateRequestOptions) (string, error) {
 	collectionName := getRequestCollectionName(opts.Language)
+	logger := r.logger.With(
+		"path", "repository.address_request.CreateNewRequest",
+		"collection", collectionName,
+	)
 	docRef := r.client.Collection(collectionName).NewDoc()
 	now := time.Now().UnixMilli()
 	newAddressRequest := models.AddressRequest{
@@ -65,9 +69,7 @@ func (r *AddressRequestRepository) CreateNewRequest(
 	}
 	_, err := docRef.Set(ctx, newAddressRequest)
 	if err != nil {
-		r.logger.Error("failed to create address request",
-			"path", "repository/address_request/CreateNewRequest",
-			"error", err)
+		logger.Error("failed to create address request", "error", err)
 		return "", fmt.Errorf("failed to create address request: %w", err)
 	}
 	return newAddressRequest.ID, nil
@@ -76,8 +78,12 @@ func (r *AddressRequestRepository) CreateNewRequest(
 func (r *AddressRequestRepository) DeleteRequests(
 	ctx context.Context,
 	opts *DeleteRequestsOptions) error {
-
 	collectionName := getRequestCollectionName(opts.Language)
+	logger := r.logger.With(
+		"path", "repository.address_request.DeleteRequests",
+		"collection", collectionName,
+		"uid", opts.UID,
+	)
 	collectionRef := r.client.Collection(collectionName)
 
 	type bulkWriteJob struct {
@@ -98,12 +104,7 @@ func (r *AddressRequestRepository) DeleteRequests(
 			docRef := collectionRef.Doc(id)
 			job, err := bulkWriter.Delete(docRef)
 			if err != nil {
-				r.logger.Error("failed to enqueue address request delete",
-					"path", "repository/address_request/DeleteRequests",
-					"uid", opts.UID,
-					"requestID", id,
-					"error", err,
-				)
+				logger.Error("failed to enqueue address request delete", "requestID", id, "error", err)
 				bulkWriter.End()
 				return fmt.Errorf("Failed to enqueue address request delete: %w", err)
 			}
@@ -112,12 +113,7 @@ func (r *AddressRequestRepository) DeleteRequests(
 		bulkWriter.Flush() // this action blocks execution
 		for _, j := range jobs {
 			if _, err := j.job.Results(); err != nil {
-				r.logger.Warn("failed to delete address request",
-					"path", "repository/address_request/DeleteRequests",
-					"uid", opts.UID,
-					"requestID", j.id,
-					"error", err,
-				)
+				logger.Warn("failed to delete address request", "requestID", j.id, "error", err)
 				bulkWriter.End()
 				return fmt.Errorf("failed to delete address request: %w", err)
 			}
