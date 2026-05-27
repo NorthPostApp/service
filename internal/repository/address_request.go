@@ -28,6 +28,8 @@ func NewAddressRequestRepository(client *infra.FirebaseClient, logger *slog.Logg
 	}
 }
 
+// Input and output types
+
 type CreateRequestOptions struct {
 	Language models.Language
 	UID      string
@@ -39,6 +41,14 @@ type DeleteRequestsOptions struct {
 	UID        string
 	RequestIDs []string
 }
+
+type GetAddressRequestsOptions struct {
+	Language   models.Language
+	RequestIDs []string
+	Status     []models.AddressRequestStatus
+}
+
+// Repo data processing functions
 
 func (r *AddressRequestRepository) CreateNewRequest(
 	ctx context.Context, opts *CreateRequestOptions) (string, error) {
@@ -116,6 +126,10 @@ func (r *AddressRequestRepository) DeleteRequests(
 	}
 	return nil
 }
+
+// Next step:
+// 1. GetRequestByUser -> by ids -> update active request count
+// 2. GetRequestByAdmin -> by status
 
 // ---------- Helper functions ----------
 func getRequestCollectionName(language models.Language) string {

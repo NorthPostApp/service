@@ -16,8 +16,13 @@ import (
 )
 
 const (
-	adminUserTable = "admin_users"
-	appUserTable   = "app_users"
+	adminUserTable           = "admin_users"
+	appUserTable             = "app_users"
+	savedAddressesCollection = "saved_addresses"
+	addressRequestCollection = "requests"
+	savedAddressesIDsPath    = "ids"
+	requestIDsPath           = "ids"
+	activeRequestCountPath   = "activeRequestCount"
 )
 
 type UpdateAddressBookAction int
@@ -153,11 +158,6 @@ func (u *UserRepository) CreateAppUser(
 		CreatedAt:   now,
 		LastLogin:   now,
 		ImageUrl:    userRecord.PhotoURL,
-		LikedMusics: []string{},
-		Drafts:      []string{},
-		AddressBook: &models.AddressBook{
-			SavedAddresses: nil,
-		},
 	}
 	return newUser, nil
 }
@@ -169,28 +169,33 @@ func (u *UserRepository) GetUserSavedAddresses(
 	opts *GetUserSavedAddressesOptions,
 ) ([]string, error) {
 	tableName := appUserTable
-	docRef := u.firestoreClient.Collection(tableName).Doc(opts.Uid)
+	logger := u.logger.With(
+		"path", "repository.user.GetUserSavedAddresses",
+		"uid", opts.Uid,
+		"language", opts.Language,
+	)
+	docRef := u.firestoreClient.
+		Collection(tableName).Doc(opts.Uid).
+		Collection(savedAddressesCollection).Doc(opts.Language.Get())
 	doc, err := docRef.Get(ctx)
-	if err != nil {
-		u.logger.Error("failed to get app user document",
-			"uid", opts.Uid,
-			"error", err,
-		)
-		return nil, fmt.Errorf("failed to get app user document: %w", err)
-	}
-	var appUser models.AppUser
-	if err := doc.DataTo(&appUser); err != nil {
-		u.logger.Error("failed to parse app user document",
-			"uid", opts.Uid,
-			"error", err,
-		)
-		return nil, fmt.Errorf("failed to parse app user document: %w", err)
-	}
-	if appUser.AddressBook == nil || appUser.AddressBook.SavedAddresses == nil {
+	// if not found, create a doc
+	if status.Code(err) == codes.NotFound {
+		err = createFirestorePath(ctx, docRef, models.SavedAddresses{IDs: []string{}})
 		return []string{}, nil
 	}
-	// parse the options' language to the model-compatible language format
-	return appUser.AddressBook.SavedAddresses[models.Language(opts.Language.Get())], nil
+	if err != nil {
+		logger.Error("failed to get app user document", "error", err)
+		return nil, fmt.Errorf("failed to get app user document: %w", err)
+	}
+	var savedAddresses models.SavedAddresses
+	if err := doc.DataTo(&savedAddresses); err != nil {
+		logger.Error("failed to parse app user document", "error", err)
+		return nil, fmt.Errorf("failed to parse app user document: %w", err)
+	}
+	if savedAddresses.IDs == nil {
+		return []string{}, nil
+	}
+	return savedAddresses.IDs, nil
 }
 
 func (u *UserRepository) UpdateUserSavedAddresses(
@@ -198,7 +203,25 @@ func (u *UserRepository) UpdateUserSavedAddresses(
 	opts *UpdateUserSavedAddressesOptions,
 ) (string, error) {
 	tableName := appUserTable
-	docRef := u.firestoreClient.Collection(tableName).Doc(opts.UserID)
+	logger := u.logger.With(
+		"path", "repository.user.UpdateUserSavedAddresses",
+		"uid", opts.UserID,
+		"language", opts.Language,
+		"action", opts.Action,
+	)
+	docRef := u.firestoreClient.
+		Collection(tableName).Doc(opts.UserID).
+		Collection(savedAddressesCollection).Doc(opts.Language.Get())
+
+	_, err := docRef.Get(ctx)
+	// if not found, create a doc
+	if status.Code(err) == codes.NotFound {
+		err = createFirestorePath(ctx, docRef, models.SavedAddresses{IDs: []string{}})
+	}
+	if err != nil {
+		logger.Error("failed to get or create saved addresses document", "error", err)
+		return "", fmt.Errorf("failed to get or create saved addresses document: %w", err)
+	}
 	var updateValue any
 	ids := make([]interface{}, len(opts.AddressIDs))
 	for i, v := range opts.AddressIDs {
@@ -210,32 +233,51 @@ func (u *UserRepository) UpdateUserSavedAddresses(
 	case Delete:
 		updateValue = firestore.ArrayRemove(ids...)
 	default:
-		u.logger.Error("unsupported update action",
-			"path", "repository.user.UpdateUserSavedAddress",
-			"action", opts.Action,
-		)
+		logger.Error("unsupported update action")
 		return "", fmt.Errorf("unsupported update action")
 	}
 	result, err := docRef.Update(ctx, []firestore.Update{
-		{Path: fmt.Sprintf("addressBook.savedAddresses.%s", opts.Language.Get()), Value: updateValue},
+		{Path: savedAddressesIDsPath, Value: updateValue},
 	})
 	if err != nil {
-		u.logger.Error(
-			"failed to update saved addresses",
-			"uid", opts.UserID,
-			"language", opts.Language,
-			"error", err)
+		u.logger.Error("failed to update saved addresses", "error", err)
 		return "", fmt.Errorf("failed to update saved addresses: %w", err)
 	}
 	return fmt.Sprintf("%d", result.UpdateTime.UnixMilli()), nil
 }
 
+// This function only updates the ids.
+// because the updates can add/remove multiple items with different status
+// the user's update request count will be handled by
+// another function
 func (u *UserRepository) UpdateUserAddressRequests(
 	ctx context.Context,
 	opts *UpdateUserAddressRequestsOptions,
 ) (string, error) {
 	tableName := appUserTable
-	docRef := u.firestoreClient.Collection(tableName).Doc(opts.UserID)
+	docRef := u.firestoreClient.
+		Collection(tableName).Doc(opts.UserID).
+		Collection(addressRequestCollection).Doc(opts.Language.Get())
+
+	_, err := docRef.Get(ctx)
+	// if doc not existed, create one
+	if status.Code(err) == codes.NotFound {
+		err = createFirestorePath(
+			ctx,
+			docRef,
+			models.AddressRequests{IDs: []string{}, ActiveRequestCount: 0})
+	}
+	if err != nil {
+		u.logger.Error(
+			"failed to update user address request",
+			"path", "repository.user.UpdateUserAddressRequest",
+			"action", opts.Action,
+			"uid", opts.UserID,
+			"language", opts.Language,
+			"error", err,
+		)
+		return "", fmt.Errorf("failed to update user address request: %w", err)
+	}
 	var updateValue any
 	ids := make([]interface{}, len(opts.RequestIDs))
 	for i, v := range opts.RequestIDs {
@@ -247,14 +289,16 @@ func (u *UserRepository) UpdateUserAddressRequests(
 	case Delete:
 		updateValue = firestore.ArrayRemove(ids...)
 	default:
-		u.logger.Error("unsupported update action",
+		u.logger.Error(
+			"unsupported update action",
 			"path", "repository.user.UpdateUserAddressRequest",
-			"action", opts.Action,
+			"uid", opts.UserID,
+			"language", opts.Language,
 		)
 		return "", fmt.Errorf("unsupported update action")
 	}
 	result, err := docRef.Update(ctx, []firestore.Update{
-		{Path: fmt.Sprintf("addressBook.requests.%s", opts.Language.Get()), Value: updateValue},
+		{Path: requestIDsPath, Value: updateValue},
 	})
 	if err != nil {
 		u.logger.Error(
@@ -267,4 +311,13 @@ func (u *UserRepository) UpdateUserAddressRequests(
 		return "", fmt.Errorf("failed to update requests: %w", err)
 	}
 	return fmt.Sprintf("%d", result.UpdateTime.UnixMilli()), nil
+}
+
+// ---------- helper functions ----------
+
+func createFirestorePath(ctx context.Context, docRef *firestore.DocumentRef, defaultValue interface{}) error {
+	if _, err := docRef.Set(ctx, defaultValue); err != nil {
+		return fmt.Errorf("failed to create firestore document: %w", err)
+	}
+	return nil
 }

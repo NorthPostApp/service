@@ -17,19 +17,12 @@ type AdminUserDTO struct {
 	ImageUrl    string `json:"imageUrl,omitempty"`
 }
 
-type AppUserAddressBookDTO struct {
-	SavedAddresses map[models.Language][]string `json:"savedAddresses"`
-}
-
 type AppUserDTO struct {
-	Email       string                `json:"email"`
-	DisplayName string                `json:"displayName"`
-	CreatedAt   int64                 `json:"createdAt"`
-	LastLogin   int64                 `json:"lastLogin"`
-	ImageUrl    string                `json:"imageUrl"`
-	LikedMusics []string              `json:"likedMusics"`
-	Drafts      []string              `json:"drafts"`
-	AddressBook AppUserAddressBookDTO `json:"addressBook"`
+	Email       string `json:"email"`
+	DisplayName string `json:"displayName"`
+	CreatedAt   int64  `json:"createdAt"`
+	LastLogin   int64  `json:"lastLogin"`
+	ImageUrl    string `json:"imageUrl"`
 }
 
 func ToAdminUserDTO(adminUser models.AdminUser) AdminUserDTO {
@@ -42,18 +35,11 @@ func ToAdminUserDTO(adminUser models.AdminUser) AdminUserDTO {
 }
 
 func ToAppUserDTO(appUser *models.AppUser) AppUserDTO {
-	addressBook := AppUserAddressBookDTO{}
-	if appUser.AddressBook != nil && appUser.AddressBook.SavedAddresses != nil {
-		addressBook.SavedAddresses = appUser.AddressBook.SavedAddresses
-	}
 	return AppUserDTO{
 		Email:       appUser.Email,
 		DisplayName: appUser.DisplayName,
 		CreatedAt:   appUser.CreatedAt,
 		LastLogin:   appUser.LastLogin,
 		ImageUrl:    appUser.ImageUrl,
-		LikedMusics: appUser.LikedMusics,
-		Drafts:      appUser.Drafts,
-		AddressBook: addressBook,
 	}
 }
