@@ -99,6 +99,10 @@ type SyncToTypesenseResult struct {
 // Get All addresses from the repository
 func (r *AddressRepository) GetAddresses(ctx context.Context, opts GetAddressesOptions) (*GetAddressesResponse, error) {
 	collectionName := getAddressCollectionName(opts.Language)
+	logger := r.logger.With(
+		"path", "repository.address.GetAddresses",
+		"collection", collectionName,
+	)
 	searchParams := &infra.SearchAddressesParams{
 		CollectionName: collectionName,
 		Keywords:       opts.Keywords,
@@ -109,13 +113,10 @@ func (r *AddressRepository) GetAddresses(ctx context.Context, opts GetAddressesO
 	// get IDs from Typesense engine
 	result, err := r.typesense.SearchAddresses(ctx, searchParams)
 	if err != nil {
-		r.logger.Error("failed to search addresses through Typesense",
-			"collectionName", collectionName,
-			"error", err,
-		)
+		logger.Error("failed to search addresses through Typesense", "error", err)
 		return nil, fmt.Errorf("failed to get search addresses through Typesense")
 	}
-	addresses, _, err := r.batchFetchAddresses(ctx, collectionName, result.Hits)
+	addresses, _, err := r.batchFetchAddresses(ctx, collectionName, result.Hits, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +135,11 @@ func (r *AddressRepository) GetAddressesByIDs(
 	ctx context.Context,
 	opts *GetAddressesByIDsOptions) (*GetAddressesByIDsResponse, error) {
 	collectionName := getAddressCollectionName(opts.Language)
-	addresses, invalidIDs, err := r.batchFetchAddresses(ctx, collectionName, opts.IDs)
+	logger := r.logger.With(
+		"path", "repository.address.GetAddressesByIDs",
+		"collection", collectionName,
+	)
+	addresses, invalidIDs, err := r.batchFetchAddresses(ctx, collectionName, opts.IDs, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -146,17 +151,23 @@ func (r *AddressRepository) GetAddressesByIDs(
 
 func (r *AddressRepository) UpdateAddress(ctx context.Context, opts UpdateAddressOption) (*models.AddressItem, error) {
 	collectionName := getAddressCollectionName(opts.Language)
+	logger := r.logger.With(
+		"path", "repository.address.UpdateAddress",
+		"collection", collectionName,
+		"addressID", opts.ID,
+	)
+
 	docRef := r.client.Collection(collectionName).Doc(opts.ID)
 	// ensure address exists and retrieve existing data
 	doc, err := docRef.Get(ctx)
 	if err != nil {
-		r.logger.Error("failed to get address document dor update", "addressID", opts.ID, "error", err)
+		logger.Error("failed to get address document dor update", "error", err)
 		return nil, fmt.Errorf("failed to get address with ID %s for update: %w", opts.ID, err)
 	}
 	var existingAddress models.AddressItem
 	if err := doc.DataTo(&existingAddress); err != nil {
-		r.logger.Error("failed to parse existing address document for update", "addressID", opts.ID, "error", err)
-		return nil, fmt.Errorf("failed to parse existing address data with ID %s: %w", opts.ID, err)
+		logger.Error("failed to parse existing address document for update", "error", err)
+		return nil, fmt.Errorf("failed to parse existing address data with id %s: %w", opts.ID, err)
 	}
 
 	addressItem := opts.AddressItem
@@ -166,7 +177,7 @@ func (r *AddressRepository) UpdateAddress(ctx context.Context, opts UpdateAddres
 
 	_, err = docRef.Set(ctx, addressItem)
 	if err != nil {
-		r.logger.Error("failed to update address", "addressID", opts.ID, "error", err)
+		logger.Error("failed to update address", "error", err)
 		return nil, fmt.Errorf("failed to update address with ID %s: %w", opts.ID, err)
 	}
 	r.typesense.UpsertAddressData(ctx, collectionName, &addressItem)
@@ -175,10 +186,15 @@ func (r *AddressRepository) UpdateAddress(ctx context.Context, opts UpdateAddres
 
 func (r *AddressRepository) DeleteAddress(ctx context.Context, opts DeleteAddressOption) (string, error) {
 	collectionName := getAddressCollectionName(opts.Language)
+	logger := r.logger.With(
+		"path", "repository.address.DeleteAddress",
+		"collection", collectionName,
+		"addressID", opts.ID,
+	)
 	docRef := r.client.Collection(collectionName).Doc(opts.ID)
 	_, err := docRef.Delete(ctx)
 	if err != nil {
-		r.logger.Error("failed to delete address", "addressID", opts.ID, "error", err)
+		logger.Error("failed to delete address", "error", err)
 		return "", fmt.Errorf("failed to delete address with ID %s: %w", opts.ID, err)
 	}
 	r.typesense.DeleteAddressData(ctx, collectionName, opts.ID)
@@ -188,6 +204,10 @@ func (r *AddressRepository) DeleteAddress(ctx context.Context, opts DeleteAddres
 // Create a new address
 func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNewAddressOption) (string, error) {
 	collectionName := getAddressCollectionName(opts.Language)
+	logger := r.logger.With(
+		"path", "repository.address.CreateNewAddress",
+		"collection", collectionName,
+	)
 	// first check if there exists data with the same name
 	query := r.client.Collection(collectionName).Where("name", "==", opts.AddressItem.Name).Limit(getByNameLimit)
 	iter := query.Documents(ctx)
@@ -198,12 +218,12 @@ func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNew
 			break
 		}
 		if err != nil {
-			r.logger.Error("failed to check for duplicate records", "error", err)
+			logger.Error("failed to check for duplicate records", "error", err)
 			return "", fmt.Errorf("failed to check for duplicate records: %w", err)
 		}
 		var existingAddress models.AddressItem
 		if err := doc.DataTo(&existingAddress); err != nil {
-			r.logger.Warn("failed to parse existing address", "docID", doc.Ref.ID, "error", err)
+			logger.Warn("failed to parse existing address", "docID", doc.Ref.ID, "error", err)
 			continue
 		}
 		similarity := compareTags(opts.AddressItem.Tags, existingAddress.Tags)
@@ -221,7 +241,7 @@ func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNew
 	addressItem.ID = docRef.ID
 	_, err := docRef.Set(ctx, addressItem)
 	if err != nil {
-		r.logger.Error("failed to create address", "error", err)
+		logger.Error("failed to create address", "error", err)
 		return "", fmt.Errorf("failed to create address: %w", err)
 	}
 	r.typesense.UpsertAddressData(ctx, collectionName, &addressItem)
@@ -229,6 +249,10 @@ func (r *AddressRepository) CreateNewAddress(ctx context.Context, opts CreateNew
 }
 
 func (r *AddressRepository) RefreshTags(ctx context.Context, opts RefreshTagsOption) (*models.TagsRecord, error) {
+	logger := r.logger.With(
+		"path", "repository.address.RefreshTags",
+		"language", opts.Language,
+	)
 	collectionName := getAddressCollectionName(opts.Language)
 	iter := r.client.Collection(collectionName).Documents(ctx)
 	defer iter.Stop()
@@ -243,17 +267,17 @@ func (r *AddressRepository) RefreshTags(ctx context.Context, opts RefreshTagsOpt
 			break
 		}
 		if err != nil {
-			r.logger.Error("failed to iterate documents for tags", "error", err)
+			logger.Error("failed to iterate documents for tags", "error", err)
 			return nil, fmt.Errorf("failed to fetch address for tags: %w", err)
 		}
 		var address models.AddressItem
 		if err := doc.DataTo(&address); err != nil {
-			r.logger.Warn("failed to parse document for tags", "docID", doc.Ref.ID, "error", err)
+			logger.Warn("failed to parse document for tags", "docID", doc.Ref.ID, "error", err)
 			continue
 		}
 		for i, tag := range address.Tags {
 			if i >= len(tagCategories) {
-				r.logger.Warn("tag index exceeds tagCategories length, skipping tag", "docID", doc.Ref.ID, "tagIndex", i, "tag", tag)
+				logger.Warn("tag index exceeds tagCategories length, skipping tag", "docID", doc.Ref.ID, "tagIndex", i, "tag", tag)
 				continue
 			}
 			tagSet[tagCategories[i]][tag] = struct{}{}
@@ -278,7 +302,7 @@ func (r *AddressRepository) RefreshTags(ctx context.Context, opts RefreshTagsOpt
 	}
 	_, err := tagDocRef.Set(ctx, tagsRecord)
 	if err != nil {
-		r.logger.Error("failed to save tags to collection", "error", err)
+		logger.Error("failed to save tags to collection", "error", err)
 		return nil, fmt.Errorf("failed to save tags to collection: %w", err)
 	}
 	return &tagsRecord, nil
@@ -286,15 +310,19 @@ func (r *AddressRepository) RefreshTags(ctx context.Context, opts RefreshTagsOpt
 
 func (r *AddressRepository) GetAllTags(ctx context.Context, opts GetAllTagsOption) (*models.TagsRecord, error) {
 	collectionName := getTagCollectionName()
+	logger := r.logger.With(
+		"path", "repository.address.GetAllTags",
+		"language", opts.Language,
+	)
 	docRef := r.client.Collection(collectionName).Doc(opts.Language.Get())
 	doc, err := docRef.Get(ctx)
 	if err != nil {
-		r.logger.Error("failed to get all tags", "error", err)
+		logger.Error("failed to get all tags", "error", err)
 		return nil, fmt.Errorf("failed to get all tags: %w", err)
 	}
 	var tagsRecord models.TagsRecord
 	if err := doc.DataTo(&tagsRecord); err != nil {
-		r.logger.Error("failed to parse tags record", "error", err)
+		logger.Error("failed to parse tags record", "error", err)
 		return nil, fmt.Errorf("failed to parse tags record: %w", err)
 	}
 	return &tagsRecord, nil
@@ -304,6 +332,10 @@ func (r *AddressRepository) SyncToTypesense(
 	ctx context.Context,
 	opts SyncToTypesenseOption) (*SyncToTypesenseResult, error) {
 	collectionName := getAddressCollectionName(opts.Language)
+	logger := r.logger.With(
+		"path", "repository.address.Typesense",
+		"collection", collectionName,
+	)
 	iter := r.client.Collection(collectionName).Documents(ctx)
 	defer iter.Stop()
 	var documents []interface{}
@@ -313,14 +345,12 @@ func (r *AddressRepository) SyncToTypesense(
 			break
 		}
 		if err != nil {
-			r.logger.Error("failed to iterate documents for typesense sync",
-				"collectionName", collectionName,
-				"error", err)
+			logger.Error("failed to iterate documents for typesense sync", "error", err)
 			return nil, fmt.Errorf("failed to fetch documents for typesense sync: %w", err)
 		}
 		var address models.AddressItem
 		if err := doc.DataTo(&address); err != nil {
-			r.logger.Warn(
+			logger.Warn(
 				"failed to parse document for typesense sync", "docID", doc.Ref.ID,
 				"error", err,
 			)
@@ -335,10 +365,7 @@ func (r *AddressRepository) SyncToTypesense(
 		collectionName,
 		documents)
 	if err != nil {
-		r.logger.Error(
-			"failed to sync address database with typesense",
-			"collectionName", collectionName,
-			"error", err)
+		logger.Error("failed to sync address database with typesense", "error", err)
 		return nil, fmt.Errorf("failed to sync address database with typesense: %w", err)
 	}
 	return &SyncToTypesenseResult{
@@ -353,7 +380,9 @@ func (r *AddressRepository) SyncToTypesense(
 func (r *AddressRepository) batchFetchAddresses(
 	ctx context.Context,
 	collectionName string,
-	IDs []string) ([]models.AddressItem, []string, error) {
+	IDs []string,
+	logger *slog.Logger,
+) ([]models.AddressItem, []string, error) {
 	collectionRef := r.client.Collection(collectionName)
 	docRefs := make([]*firestore.DocumentRef, len(IDs))
 	for i, id := range IDs {
@@ -361,10 +390,7 @@ func (r *AddressRepository) batchFetchAddresses(
 	}
 	docs, err := r.client.GetAll(ctx, docRefs)
 	if err != nil {
-		r.logger.Error("failed to batch fetch addresses",
-			"collectionName", collectionName,
-			"error", err,
-		)
+		logger.Error("failed to batch fetch addresses", "error", err)
 		return nil, nil, fmt.Errorf("failed to batch fetch addresses: %w", err)
 	}
 	addresses := []models.AddressItem{}
@@ -372,21 +398,18 @@ func (r *AddressRepository) batchFetchAddresses(
 	for _, doc := range docs {
 		if !doc.Exists() {
 			invalidIDs = append(invalidIDs, doc.Ref.ID)
-			r.logger.Warn("address not found", "ID", doc.Ref.ID)
+			logger.Warn("address not found", "ID", doc.Ref.ID)
 		}
 		var addressItem models.AddressItem
 		if err := doc.DataTo(&addressItem); err != nil {
-			r.logger.Warn("failed to parse address",
-				"docID", doc.Ref.ID,
-				"error", err,
-			)
+			logger.Warn("failed to parse address", "docID", doc.Ref.ID, "error", err)
 			invalidIDs = append(invalidIDs, doc.Ref.ID)
 		} else {
 			addresses = append(addresses, addressItem)
 		}
 	}
 	if len(invalidIDs) != 0 {
-		r.logger.Warn("some documents failed to fetch or parse", "count", len(invalidIDs))
+		logger.Warn("some documents failed to fetch or parse", "count", len(invalidIDs))
 	}
 	return addresses, invalidIDs, nil
 }
