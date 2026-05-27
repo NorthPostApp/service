@@ -138,6 +138,9 @@ func (h *AddressBookHandler) CreateNewRequest(c *gin.Context) {
 	if !utils.BindJSON(c, &req, h.logger) {
 		return
 	}
+
+	// check how many active request does this user have
+
 	// create new request
 	createRequestOpts := &repository.CreateRequestOptions{
 		Language: language,
