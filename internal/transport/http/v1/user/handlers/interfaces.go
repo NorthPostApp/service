@@ -22,6 +22,13 @@ type userRepository interface {
 		ctx context.Context,
 		opts *repository.UpdateUserAddressRequestsOptions,
 	) (string, error)
+	GetUserRequestsIDs(
+		ctx context.Context,
+		opts *repository.GetUserRequestsIDsOptions,
+	) ([]string, error)
+	UpdateUserActiveRequestCount(
+		ctx context.Context, opts *repository.UpdateUserActiveRequestCountOptions,
+	) error
 }
 
 type addressRequestRepository interface {
@@ -31,6 +38,11 @@ type addressRequestRepository interface {
 	DeleteRequests(
 		ctx context.Context,
 		opts *repository.DeleteRequestsOptions) error
+	GetRequestsByIDs(
+		ctx context.Context,
+		opts *repository.GetRequestsByIDsOptions) (
+		*repository.GetRequestsByIDsResponse, error,
+	)
 }
 
 type addressRepository interface {

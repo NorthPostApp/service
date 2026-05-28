@@ -24,3 +24,7 @@ type CreateNewRequest struct {
 type CreateNewRequestResponse struct {
 	Data string
 }
+
+type GetRequestByIDsResponse struct {
+	Data []models.AddressRequest
+}
