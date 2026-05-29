@@ -169,25 +169,27 @@ func (r *AddressRequestRepository) CreateNewRequestWithLimit(
 		"uid", opts.UID,
 		"collection", collectionName,
 	)
+	// if the content is too short, skip the rest transactions
+	if !validRequestContentLength(opts.Language, opts.Content) {
+		logger.Error("insufficient count length", "content", opts.Content)
+		return "", fmt.Errorf("insufficient content length. content: %s", opts.Content)
+	}
+
 	newRequestDocRef := r.client.Collection(collectionName).NewDoc()
 	userRequestRef := r.client.
 		Collection(appUserTable).Doc(opts.UID).
 		Collection(addressRequestCollection).Doc(opts.Language.Get())
 	// transactional update to avoid race condition or abusive requests
 	err := r.client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		if !validRequestContentLength(opts.Language, opts.Content) {
-			return fmt.Errorf("insufficient content length. content: %s", opts.Content)
-		}
 		var currentUserRequests models.AddressRequests
 		doc, err := tx.Get(userRequestRef)
+		exists := true
 		if status.Code(err) == codes.NotFound {
 			currentUserRequests = models.AddressRequests{
 				IDs:                []string{},
 				ActiveRequestCount: 0,
 			}
-			if err := tx.Set(userRequestRef, currentUserRequests); err != nil {
-				return fmt.Errorf("failed to initialize user's requests data: %w", err)
-			}
+			exists = false
 		} else if err != nil {
 			return fmt.Errorf("failed to get user's request data: %w", err)
 		} else if err := doc.DataTo(&currentUserRequests); err != nil {
@@ -208,10 +210,16 @@ func (r *AddressRequestRepository) CreateNewRequestWithLimit(
 		if err := tx.Set(newRequestDocRef, newAddressRequest); err != nil {
 			return fmt.Errorf("failed to create address request: %w", err)
 		}
-		err = tx.Update(userRequestRef, []firestore.Update{
-			{Path: requestIDsPath, Value: firestore.ArrayUnion(newAddressRequest.ID)},
-			{Path: activeRequestCountPath, Value: currentUserRequests.ActiveRequestCount + 1},
-		})
+		if !exists {
+			currentUserRequests.IDs = []string{newAddressRequest.ID}
+			currentUserRequests.ActiveRequestCount = 1
+			err = tx.Set(userRequestRef, currentUserRequests)
+		} else {
+			err = tx.Update(userRequestRef, []firestore.Update{
+				{Path: requestIDsPath, Value: firestore.ArrayUnion(newAddressRequest.ID)},
+				{Path: activeRequestCountPath, Value: currentUserRequests.ActiveRequestCount + 1},
+			})
+		}
 		if err != nil {
 			return fmt.Errorf("failed to update user request data: %w", err)
 		}
