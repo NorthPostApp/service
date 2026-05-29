@@ -96,7 +96,7 @@ type mockAddressRequestRepo struct {
 	mock.Mock
 }
 
-func (m *mockAddressRequestRepo) CreateNewRequest(
+func (m *mockAddressRequestRepo) CreateNewRequestWithLimit(
 	ctx context.Context,
 	opts *repository.CreateRequestOptions) (string, error) {
 	args := m.Called(ctx, opts)

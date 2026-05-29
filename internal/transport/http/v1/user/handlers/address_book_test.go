@@ -211,7 +211,7 @@ func TestCreateNewRequest(t *testing.T) {
 			)
 			router := setupAddressBookRouter(handler, tt.uid, tt.language)
 			if tt.expectCreateRequestCall {
-				mockAddressRequestRepo.On("CreateNewRequest", mock.Anything, mock.Anything).
+				mockAddressRequestRepo.On("CreateNewRequestWithLimit", mock.Anything, mock.Anything).
 					Return(tt.mockCreateRequestOutput, tt.mockCreateRequestError).Once()
 			}
 			if tt.expectUpdateRequestCall {
