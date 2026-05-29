@@ -147,7 +147,7 @@ func (h *AddressBookHandler) CreateNewRequest(c *gin.Context) {
 		UID:      uid,
 		Content:  req.Content,
 	}
-	newRequestID, err := h.addressRequestRepo.CreateNewRequest(c.Request.Context(), createRequestOpts)
+	newRequestID, err := h.addressRequestRepo.CreateNewRequestWithLimit(c.Request.Context(), createRequestOpts)
 	if err != nil {
 		h.logger.Error("failed to create address request",
 			"path", "user/handlers/address_book/CreateNewRequest",

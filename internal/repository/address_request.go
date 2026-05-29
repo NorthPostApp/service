@@ -6,14 +6,20 @@ import (
 	"log/slog"
 	"north-post/service/internal/domain/v1/models"
 	"north-post/service/internal/infra"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"cloud.google.com/go/firestore"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
-	requestTablePrefix = "address_requests"
-	batchLimit         = 500
+	requestTablePrefix   = "address_requests"
+	batchLimit           = 500
+	openRequestLimit     = 10
+	minimumContentLength = 10
 )
 
 type AddressRequestRepository struct {
@@ -55,32 +61,6 @@ type GetRequestsByIDsResponse struct {
 }
 
 // Repo data processing functions
-
-// IMPORTANT should implement limits to this function
-func (r *AddressRequestRepository) CreateNewRequest(
-	ctx context.Context, opts *CreateRequestOptions) (string, error) {
-	collectionName := getRequestCollectionName(opts.Language)
-	logger := r.logger.With(
-		"path", "repository.address_request.CreateNewRequest",
-		"collection", collectionName,
-	)
-	docRef := r.client.Collection(collectionName).NewDoc()
-	now := time.Now().UnixMilli()
-	newAddressRequest := models.AddressRequest{
-		ID:        docRef.ID,
-		Content:   opts.Content,
-		RequestBy: opts.UID,
-		Status:    models.RequestStatusPending,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-	_, err := docRef.Set(ctx, newAddressRequest)
-	if err != nil {
-		logger.Error("failed to create address request", "error", err)
-		return "", fmt.Errorf("failed to create address request: %w", err)
-	}
-	return newAddressRequest.ID, nil
-}
 
 func (r *AddressRequestRepository) DeleteRequests(
 	ctx context.Context,
@@ -180,7 +160,91 @@ func (r *AddressRequestRepository) GetRequestsByIDs(
 
 // 2. GetRequestByAdmin -> by status
 
+// ---------- Special Use Cases: Cross-Repo Processing ---------
+func (r *AddressRequestRepository) CreateNewRequestWithLimit(
+	ctx context.Context, opts *CreateRequestOptions) (string, error) {
+	collectionName := getRequestCollectionName(opts.Language)
+	logger := r.logger.With(
+		"path", "repository.address_request.CreateNewRequestWithLimit",
+		"uid", opts.UID,
+		"collection", collectionName,
+	)
+	// if the content is too short, skip the rest transactions
+	if !validRequestContentLength(opts.Language, opts.Content) {
+		logger.Error("insufficient count length", "content", opts.Content)
+		return "", fmt.Errorf("insufficient content length. content: %s", opts.Content)
+	}
+
+	newRequestDocRef := r.client.Collection(collectionName).NewDoc()
+	userRequestRef := r.client.
+		Collection(appUserTable).Doc(opts.UID).
+		Collection(addressRequestCollection).Doc(opts.Language.Get())
+	// transactional update to avoid race condition or abusive requests
+	err := r.client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
+		var currentUserRequests models.AddressRequests
+		doc, err := tx.Get(userRequestRef)
+		exists := true
+		if status.Code(err) == codes.NotFound {
+			currentUserRequests = models.AddressRequests{
+				IDs:                []string{},
+				ActiveRequestCount: 0,
+			}
+			exists = false
+		} else if err != nil {
+			return fmt.Errorf("failed to get user's request data: %w", err)
+		} else if err := doc.DataTo(&currentUserRequests); err != nil {
+			return fmt.Errorf("failed to parse user's request data: %w", err)
+		}
+		if currentUserRequests.ActiveRequestCount >= openRequestLimit {
+			return fmt.Errorf("too many active address requests")
+		}
+		now := time.Now().UnixMilli()
+		newAddressRequest := models.AddressRequest{
+			ID:        newRequestDocRef.ID,
+			Content:   opts.Content,
+			RequestBy: opts.UID,
+			Status:    models.RequestStatusPending,
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+		if err := tx.Set(newRequestDocRef, newAddressRequest); err != nil {
+			return fmt.Errorf("failed to create address request: %w", err)
+		}
+		if !exists {
+			currentUserRequests.IDs = []string{newAddressRequest.ID}
+			currentUserRequests.ActiveRequestCount = 1
+			err = tx.Set(userRequestRef, currentUserRequests)
+		} else {
+			err = tx.Update(userRequestRef, []firestore.Update{
+				{Path: requestIDsPath, Value: firestore.ArrayUnion(newAddressRequest.ID)},
+				{Path: activeRequestCountPath, Value: currentUserRequests.ActiveRequestCount + 1},
+			})
+		}
+		if err != nil {
+			return fmt.Errorf("failed to update user request data: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		logger.Error("failed to create new address request", "error", err.Error())
+		return "", err
+	}
+	return newRequestDocRef.ID, nil
+}
+
 // ---------- Helper functions ----------
 func getRequestCollectionName(language models.Language) string {
 	return fmt.Sprintf("%s_%s", requestTablePrefix, language.Get())
+}
+
+func validRequestContentLength(language models.Language, content string) bool {
+	content = strings.TrimSpace(content)
+	switch language {
+	case models.LanguageZH:
+		return utf8.RuneCountInString(content) >= minimumContentLength
+	case models.LanguageEN:
+		return len(strings.Fields(content)) >= minimumContentLength
+	default:
+		return false
+	}
 }

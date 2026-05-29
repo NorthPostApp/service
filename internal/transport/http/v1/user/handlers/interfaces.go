@@ -32,7 +32,7 @@ type userRepository interface {
 }
 
 type addressRequestRepository interface {
-	CreateNewRequest(
+	CreateNewRequestWithLimit(
 		ctx context.Context,
 		opts *repository.CreateRequestOptions) (string, error)
 	DeleteRequests(
