@@ -58,15 +58,15 @@ func (m *mockUserRepo) UpdateUserAddressRequests(
 	return args.Get(0).(string), args.Error(1)
 }
 
-func (m *mockUserRepo) GetUserRequestsIDs(
+func (m *mockUserRepo) GetUserRequests(
 	ctx context.Context,
-	opts *repository.GetUserRequestsIDsOptions,
-) ([]string, error) {
+	opts *repository.GetUserRequestsOptions,
+) (*models.AddressRequests, error) {
 	args := m.Called(ctx, opts)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]string), args.Error(1)
+	return args.Get(0).(*models.AddressRequests), args.Error(1)
 }
 func (m *mockUserRepo) UpdateUserActiveRequestCount(
 	ctx context.Context, opts *repository.UpdateUserActiveRequestCountOptions,

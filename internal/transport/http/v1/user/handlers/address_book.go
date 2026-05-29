@@ -198,11 +198,11 @@ func (h *AddressBookHandler) GetRequestsByIDs(c *gin.Context) {
 		"language", language,
 	)
 	// step 1, get IDs from user repository
-	getRequestIDsOpts := &repository.GetUserRequestsIDsOptions{
+	getRequestIDsOpts := &repository.GetUserRequestsOptions{
 		Language: language,
 		Uid:      uid,
 	}
-	requestIDs, err := h.userRepo.GetUserRequestsIDs(c.Request.Context(), getRequestIDsOpts)
+	requests, err := h.userRepo.GetUserRequests(c.Request.Context(), getRequestIDsOpts)
 	if err != nil {
 		logger.Error("failed to get user request ids", "error", err)
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
@@ -210,13 +210,20 @@ func (h *AddressBookHandler) GetRequestsByIDs(c *gin.Context) {
 	}
 	// step 2, get request with the ids from the previous step
 	getRequestsByIDsOpts := &repository.GetRequestsByIDsOptions{
-		Language: language, UID: uid, RequestIDs: requestIDs}
+		Language: language, UID: uid, RequestIDs: requests.IDs}
 	requestData, err := h.addressRequestRepo.GetRequestsByIDs(c.Request.Context(), getRequestsByIDsOpts)
+	if err != nil {
+		logger.Error("failed to get request by ids", "error", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
 	// step 3, update active request count and remove invalid ids in the background
 	if len(requestData.InvalidIDs) != 0 {
 		h.asyncRemoveInvalidRequestData(uid, language, requestData.InvalidIDs, logger)
 	}
-	h.asyncUpdateUserActiveRequestCount(uid, language, requestData.ActiveRequests, logger)
+	if requests.ActiveRequestCount != requestData.ActiveRequestsCount {
+		h.asyncUpdateUserActiveRequestCount(uid, language, requestData.ActiveRequestsCount, logger)
+	}
 	c.JSON(http.StatusOK, dto.GetRequestByIDsResponse{Data: requestData.Requests})
 }
 

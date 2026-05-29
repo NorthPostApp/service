@@ -22,10 +22,10 @@ type userRepository interface {
 		ctx context.Context,
 		opts *repository.UpdateUserAddressRequestsOptions,
 	) (string, error)
-	GetUserRequestsIDs(
+	GetUserRequests(
 		ctx context.Context,
-		opts *repository.GetUserRequestsIDsOptions,
-	) ([]string, error)
+		opts *repository.GetUserRequestsOptions,
+	) (*models.AddressRequests, error)
 	UpdateUserActiveRequestCount(
 		ctx context.Context, opts *repository.UpdateUserActiveRequestCountOptions,
 	) error

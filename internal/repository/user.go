@@ -55,7 +55,7 @@ type GetUserSavedAddressesOptions struct {
 	Uid      string
 }
 
-type GetUserRequestsIDsOptions struct {
+type GetUserRequestsOptions struct {
 	Language models.Language
 	Uid      string
 }
@@ -271,9 +271,9 @@ func (u *UserRepository) UpdateUserSavedAddresses(
 }
 
 // Get user's address requests ids with the given language
-func (u *UserRepository) GetUserRequestsIDs(
+func (u *UserRepository) GetUserRequests(
 	ctx context.Context,
-	opts *GetUserRequestsIDsOptions) ([]string, error) {
+	opts *GetUserRequestsOptions) (*models.AddressRequests, error) {
 	tableName := appUserTable
 	logger := u.logger.With(
 		"path", "repository.user.GetUserRequestsIDs",
@@ -286,16 +286,17 @@ func (u *UserRepository) GetUserRequestsIDs(
 	doc, err := docRef.Get(ctx)
 	// if doc not existed, create one
 	if status.Code(err) == codes.NotFound {
+		newRequests := models.AddressRequests{IDs: []string{}, ActiveRequestCount: 0}
 		err = createFirestorePath(
 			ctx,
 			docRef,
-			models.AddressRequests{IDs: []string{}, ActiveRequestCount: 0})
+			newRequests)
 		if err != nil {
 			logger.Error("failed to  create user address requests doc", "error", err)
 			return nil, fmt.Errorf("failed to create user address request doc: %w", err)
 		}
 		// early return an empty list if the doc just created
-		return []string{}, nil
+		return &newRequests, nil
 	}
 	if err != nil {
 		logger.Error("failed to get user address requests doc", "error", err)
@@ -306,11 +307,7 @@ func (u *UserRepository) GetUserRequestsIDs(
 		logger.Error("failed to parse user address request doc", "error", err)
 		return nil, fmt.Errorf("failed to parse user address request doc: %w", err)
 	}
-	ids := addressRequests.IDs
-	if ids == nil || len(ids) == 0 {
-		return []string{}, nil
-	}
-	return ids, nil
+	return &addressRequests, nil
 }
 
 // This function only updates the ids.
@@ -381,21 +378,7 @@ func (u *UserRepository) UpdateUserActiveRequestCount(
 	docRef := u.firestoreClient.
 		Collection(tableName).Doc(opts.UID).
 		Collection(addressRequestCollection).Doc(opts.Language.Get())
-	snap, err := docRef.Get(ctx)
-	if err != nil {
-		logger.Error("failed to get user's doc", "error", err)
-		return fmt.Errorf("failed to get user's docL: %w", err)
-	}
-	value, err := snap.DataAt(activeRequestCountPath)
-	if err != nil {
-		logger.Error("failed to get user's active request count", "error", err)
-		return fmt.Errorf("failed to get user's active request count: %w", err)
-	}
-	// if no updates, just return
-	if value.(int64) == opts.Count {
-		return nil
-	}
-	_, err = docRef.Update(ctx, []firestore.Update{{Path: activeRequestCountPath, Value: opts.Count}})
+	_, err := docRef.Update(ctx, []firestore.Update{{Path: activeRequestCountPath, Value: opts.Count}})
 	if err != nil {
 		logger.Error("failed to update user's active request count", "error", err)
 		return fmt.Errorf("failed to update user's active request count: %w", err)

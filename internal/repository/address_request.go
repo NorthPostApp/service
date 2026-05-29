@@ -49,9 +49,9 @@ type GetRequestsByIDsOptions struct {
 }
 
 type GetRequestsByIDsResponse struct {
-	InvalidIDs     []string
-	Requests       []models.AddressRequest
-	ActiveRequests int64
+	InvalidIDs          []string
+	Requests            []models.AddressRequest
+	ActiveRequestsCount int64
 }
 
 // Repo data processing functions
@@ -158,6 +158,7 @@ func (r *AddressRequestRepository) GetRequestsByIDs(
 		if !doc.Exists() {
 			invalidIDs = append(invalidIDs, doc.Ref.ID)
 			logger.Warn("request not found", "docID", doc.Ref.ID)
+			continue
 		}
 		var request models.AddressRequest
 		if err := doc.DataTo(&request); err != nil {
@@ -171,9 +172,9 @@ func (r *AddressRequestRepository) GetRequestsByIDs(
 		}
 	}
 	return &GetRequestsByIDsResponse{
-		InvalidIDs:     invalidIDs,
-		Requests:       requests,
-		ActiveRequests: activeRequestCount,
+		InvalidIDs:          invalidIDs,
+		Requests:            requests,
+		ActiveRequestsCount: activeRequestCount,
 	}, nil
 }
 
