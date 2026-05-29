@@ -42,14 +42,21 @@ type DeleteRequestsOptions struct {
 	RequestIDs []string
 }
 
-type GetAddressRequestsOptions struct {
+type GetRequestsByIDsOptions struct {
 	Language   models.Language
+	UID        string
 	RequestIDs []string
-	Status     []models.AddressRequestStatus
+}
+
+type GetRequestsByIDsResponse struct {
+	InvalidIDs          []string
+	Requests            []models.AddressRequest
+	ActiveRequestsCount int64
 }
 
 // Repo data processing functions
 
+// IMPORTANT should implement limits to this function
 func (r *AddressRequestRepository) CreateNewRequest(
 	ctx context.Context, opts *CreateRequestOptions) (string, error) {
 	collectionName := getRequestCollectionName(opts.Language)
@@ -125,6 +132,52 @@ func (r *AddressRequestRepository) DeleteRequests(
 
 // Next step:
 // 1. GetRequestByUser -> by ids -> update active request count
+// This function is for AppUser
+func (r *AddressRequestRepository) GetRequestsByIDs(
+	ctx context.Context, opts *GetRequestsByIDsOptions) (*GetRequestsByIDsResponse, error) {
+	collectionName := getRequestCollectionName(opts.Language)
+	logger := r.logger.With(
+		"path", "repository.address_request.GetRequestByIDs",
+		"collectionName", collectionName,
+		"uid", opts.UID,
+	)
+	collectionRef := r.client.Collection(collectionName)
+	docRefs := make([]*firestore.DocumentRef, len(opts.RequestIDs))
+	for i, id := range opts.RequestIDs {
+		docRefs[i] = collectionRef.Doc(id)
+	}
+	docs, err := r.client.GetAll(ctx, docRefs)
+	if err != nil {
+		logger.Error("failed to batch fetch requests", "error", err)
+		return nil, fmt.Errorf("failed to batch fetch requests: %w", err)
+	}
+	requests := []models.AddressRequest{}
+	invalidIDs := []string{}
+	var activeRequestCount int64 = 0
+	for _, doc := range docs {
+		if !doc.Exists() {
+			invalidIDs = append(invalidIDs, doc.Ref.ID)
+			logger.Warn("request not found", "docID", doc.Ref.ID)
+			continue
+		}
+		var request models.AddressRequest
+		if err := doc.DataTo(&request); err != nil {
+			invalidIDs = append(invalidIDs, doc.Ref.ID)
+			logger.Warn("failed to parse document", "docID", doc.Ref.ID)
+			continue
+		}
+		requests = append(requests, request)
+		if request.Status == models.RequestStatusPending || request.Status == models.RequestStatusProcessing {
+			activeRequestCount += 1
+		}
+	}
+	return &GetRequestsByIDsResponse{
+		InvalidIDs:          invalidIDs,
+		Requests:            requests,
+		ActiveRequestsCount: activeRequestCount,
+	}, nil
+}
+
 // 2. GetRequestByAdmin -> by status
 
 // ---------- Helper functions ----------

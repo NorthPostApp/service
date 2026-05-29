@@ -27,6 +27,7 @@ func setupAddressBookRouter(handler *AddressBookHandler, uid string, language st
 	group.PATCH("", handler.UpdateSavedAddresses)
 	group.GET("", handler.GetSavedAddresses)
 	group.POST("/request", handler.CreateNewRequest)
+	group.GET("/request", handler.GetRequestsByIDs)
 	return r
 }
 
@@ -326,6 +327,201 @@ func TestGetSavedAddresses(t *testing.T) {
 				}
 			}
 			mockAddressRepo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGetRequestsByIDs(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                        string
+		uid                         string
+		language                    string
+		expectGetUserRequestsCall   bool
+		getUserRequestsOutput       *models.AddressRequests
+		getUserRequestsError        error
+		expectedGetRequestByIDsCall bool
+		getRequestsByIDsOutput      *repository.GetRequestsByIDsResponse
+		getRequestsByIDsError       error
+		expectAsyncRemoveIDsCall    bool
+		expectAsyncUpdateCountCall  bool
+		expectedStatus              int
+	}{
+		{
+			name:                      "success",
+			uid:                       "user_id",
+			language:                  "en",
+			expectGetUserRequestsCall: true,
+			getUserRequestsOutput: &models.AddressRequests{
+				IDs:                []string{"id_1", "id_2"},
+				ActiveRequestCount: 2},
+			getUserRequestsError:        nil,
+			expectedGetRequestByIDsCall: true,
+			getRequestsByIDsOutput: &repository.GetRequestsByIDsResponse{
+				Requests:            []models.AddressRequest{{ID: "123"}},
+				ActiveRequestsCount: 2,
+			},
+			expectAsyncRemoveIDsCall:   false,
+			expectAsyncUpdateCountCall: false,
+			expectedStatus:             http.StatusOK,
+		},
+		{
+			name:                      "success with remove invalid ids",
+			uid:                       "user_id",
+			language:                  "en",
+			expectGetUserRequestsCall: true,
+			getUserRequestsOutput: &models.AddressRequests{
+				IDs:                []string{"id_1", "id_2"},
+				ActiveRequestCount: 2},
+			getUserRequestsError:        nil,
+			expectedGetRequestByIDsCall: true,
+			getRequestsByIDsOutput: &repository.GetRequestsByIDsResponse{
+				Requests:            []models.AddressRequest{{ID: "123"}},
+				InvalidIDs:          []string{"invalid-1"},
+				ActiveRequestsCount: 2,
+			},
+			expectAsyncRemoveIDsCall:   true,
+			expectAsyncUpdateCountCall: false,
+			expectedStatus:             http.StatusOK,
+		},
+		{
+			name:                      "success with new counts",
+			uid:                       "user_id",
+			language:                  "en",
+			expectGetUserRequestsCall: true,
+			getUserRequestsOutput: &models.AddressRequests{
+				IDs:                []string{"id_1", "id_2"},
+				ActiveRequestCount: 2},
+			getUserRequestsError:        nil,
+			expectedGetRequestByIDsCall: true,
+			getRequestsByIDsOutput: &repository.GetRequestsByIDsResponse{
+				Requests:            []models.AddressRequest{{ID: "123"}},
+				InvalidIDs:          []string{"invalid-1"},
+				ActiveRequestsCount: 4,
+			},
+			expectAsyncRemoveIDsCall:   true,
+			expectAsyncUpdateCountCall: true,
+			expectedStatus:             http.StatusOK,
+		},
+		{
+			name:                        "invalid id",
+			uid:                         "",
+			language:                    "en",
+			expectGetUserRequestsCall:   false,
+			getUserRequestsOutput:       nil,
+			getUserRequestsError:        nil,
+			expectedGetRequestByIDsCall: false,
+			getRequestsByIDsOutput:      nil,
+			expectAsyncRemoveIDsCall:    false,
+			expectAsyncUpdateCountCall:  false,
+			expectedStatus:              http.StatusUnauthorized,
+		},
+		{
+			name:                        "failed GetUserRequests",
+			uid:                         "user_id",
+			language:                    "en",
+			expectGetUserRequestsCall:   true,
+			getUserRequestsOutput:       nil,
+			getUserRequestsError:        errors.New("failed call"),
+			expectedGetRequestByIDsCall: false,
+			getRequestsByIDsOutput:      nil,
+			expectAsyncRemoveIDsCall:    false,
+			expectAsyncUpdateCountCall:  false,
+			expectedStatus:              http.StatusInternalServerError,
+		},
+		{
+			name:                      "failed GetRequestsByIDs",
+			uid:                       "user_id",
+			language:                  "en",
+			expectGetUserRequestsCall: true,
+			getUserRequestsOutput: &models.AddressRequests{
+				IDs:                []string{"id_1", "id_2"},
+				ActiveRequestCount: 2},
+			getUserRequestsError:        nil,
+			expectedGetRequestByIDsCall: true,
+			getRequestsByIDsOutput:      nil,
+			getRequestsByIDsError:       errors.New("failed"),
+			expectAsyncRemoveIDsCall:    false,
+			expectAsyncUpdateCountCall:  false,
+			expectedStatus:              http.StatusInternalServerError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockUserRepo := new(mockUserRepo)
+			mockAddressRepo := new(mockAddressRepo)
+			mockAddressRequestRepo := new(mockAddressRequestRepo)
+			handler := NewAddressBookHandler(
+				mockUserRepo,
+				mockAddressRepo,
+				mockAddressRequestRepo,
+				slog.New(slog.NewTextHandler(io.Discard, nil)))
+			router := setupAddressBookRouter(handler, tt.uid, tt.language)
+			if tt.expectGetUserRequestsCall {
+				mockUserRepo.On(
+					"GetUserRequests",
+					mock.Anything,
+					mock.Anything,
+				).Return(tt.getUserRequestsOutput, tt.getUserRequestsError).Once()
+			}
+			if tt.expectedGetRequestByIDsCall {
+				mockAddressRequestRepo.On(
+					"GetRequestsByIDs",
+					mock.Anything,
+					mock.Anything,
+				).Return(tt.getRequestsByIDsOutput, tt.getRequestsByIDsError).Once()
+			}
+
+			invalidIDsCleanup := make(chan *repository.UpdateUserAddressRequestsOptions, 1)
+			activeCountUpdate := make(chan *repository.UpdateUserActiveRequestCountOptions, 1)
+
+			if tt.expectAsyncRemoveIDsCall {
+				mockUserRepo.On(
+					"UpdateUserAddressRequests",
+					mock.Anything,
+					mock.MatchedBy(func(opts *repository.UpdateUserAddressRequestsOptions) bool {
+						invalidIDsCleanup <- opts
+						return opts.UserID == tt.uid &&
+							opts.Language == models.Language(tt.language) &&
+							opts.Action == repository.Delete &&
+							assert.ElementsMatch(t, tt.getRequestsByIDsOutput.InvalidIDs, opts.RequestIDs)
+					}),
+				).Return("", nil).Once()
+			}
+
+			if tt.expectAsyncUpdateCountCall {
+				mockUserRepo.On(
+					"UpdateUserActiveRequestCount",
+					mock.Anything,
+					mock.MatchedBy(func(opts *repository.UpdateUserActiveRequestCountOptions) bool {
+						activeCountUpdate <- opts
+						return opts.Count == tt.getRequestsByIDsOutput.ActiveRequestsCount
+					}),
+				).Return(nil).Once()
+			}
+
+			req, _ := http.NewRequest("GET", "/user/address-book/request", nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			if tt.expectAsyncRemoveIDsCall {
+				select {
+				case opts := <-invalidIDsCleanup:
+					assert.Equal(t, tt.uid, opts.UserID)
+					assert.Equal(t, tt.language, opts.Language.Get())
+				case <-time.After(time.Second):
+					t.Fatal("time out waiting for background clean up call")
+				}
+			}
+			if tt.expectAsyncUpdateCountCall {
+				select {
+				case opts := <-activeCountUpdate:
+					assert.Equal(t, tt.getRequestsByIDsOutput.ActiveRequestsCount, opts.Count)
+				case <-time.After(time.Second):
+					t.Fatal("time out waiting for background update call")
+				}
+			}
+			mockUserRepo.AssertExpectations(t)
 			mockAddressRepo.AssertExpectations(t)
 		})
 	}

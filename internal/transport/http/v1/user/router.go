@@ -36,6 +36,7 @@ func SetupUserRouter(router *gin.RouterGroup, h *Handlers, middlewares *middlewa
 			addressBook.PATCH("", middlewares.LanguageFromBody, h.AddressBook.UpdateSavedAddresses)
 			addressBook.GET("", middlewares.LanguageFromQuery, h.AddressBook.GetSavedAddresses)
 			addressBook.POST("/request", middlewares.LanguageFromBody, h.AddressBook.CreateNewRequest)
+			addressBook.GET("/request", middlewares.LanguageFromQuery, h.AddressBook.GetRequestsByIDs)
 		}
 	}
 }

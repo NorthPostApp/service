@@ -175,6 +175,58 @@ func (h *AddressBookHandler) CreateNewRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.CreateNewRequestResponse{Data: newRequestID})
 }
 
+// GetRequestsByIDs godoc
+// @Summary Get user address requests
+// @Description Retrieve all address requests for the authenticated user
+// @Tags App User
+// @Param Authorization header string true "Bearer idToken"
+// @Param language query string true "Language code (e.g., en, zh)"
+// @Produce json
+// @Success 200 {object} dto.GetRequestByIDsResponse
+// @Failure 401 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /user/address-book/request [get]
+func (h *AddressBookHandler) GetRequestsByIDs(c *gin.Context) {
+	uid := c.GetString(middleware.UidKey)
+	language := models.Language(c.GetString(middleware.LanguageKey))
+	if !validateUser(c, uid, h.logger) {
+		return
+	}
+	logger := h.logger.With(
+		"path", "v1.user.handlers.address_book.GetRequestsByIDs",
+		"uid", uid,
+		"language", language,
+	)
+	// step 1, get IDs from user repository
+	getRequestIDsOpts := &repository.GetUserRequestsOptions{
+		Language: language,
+		Uid:      uid,
+	}
+	requests, err := h.userRepo.GetUserRequests(c.Request.Context(), getRequestIDsOpts)
+	if err != nil {
+		logger.Error("failed to get user request ids", "error", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+	// step 2, get request with the ids from the previous step
+	getRequestsByIDsOpts := &repository.GetRequestsByIDsOptions{
+		Language: language, UID: uid, RequestIDs: requests.IDs}
+	requestData, err := h.addressRequestRepo.GetRequestsByIDs(c.Request.Context(), getRequestsByIDsOpts)
+	if err != nil {
+		logger.Error("failed to get request by ids", "error", err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
+		return
+	}
+	// step 3, update active request count and remove invalid ids in the background
+	if len(requestData.InvalidIDs) != 0 {
+		h.asyncRemoveInvalidRequestData(uid, language, requestData.InvalidIDs, logger)
+	}
+	if requests.ActiveRequestCount != requestData.ActiveRequestsCount {
+		h.asyncUpdateUserActiveRequestCount(uid, language, requestData.ActiveRequestsCount, logger)
+	}
+	c.JSON(http.StatusOK, dto.GetRequestByIDsResponse{Data: requestData.Requests})
+}
+
 // ---------- Helper methods ----------
 func (h *AddressBookHandler) convertUpdateMethod(action string) repository.UpdateAddressBookAction {
 	action = strings.ToLower(action)
@@ -208,4 +260,43 @@ func (h *AddressBookHandler) removeInvalidIDsInBackground(uid string, language m
 			)
 		}
 	}(invalidIDs)
+}
+
+func (h *AddressBookHandler) asyncRemoveInvalidRequestData(
+	uid string, language models.Language, invalidIDs []string, logger *slog.Logger) {
+	go func(invalidIDs []string) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_, err := h.userRepo.UpdateUserAddressRequests(
+			ctx,
+			&repository.UpdateUserAddressRequestsOptions{
+				Language:   language,
+				UserID:     uid,
+				RequestIDs: invalidIDs,
+				Action:     repository.Delete,
+			},
+		)
+		if err != nil {
+			logger.Error("failed to remove invalid ids", "error", err)
+		}
+	}(invalidIDs)
+}
+
+func (h *AddressBookHandler) asyncUpdateUserActiveRequestCount(
+	uid string, language models.Language, count int64, logger *slog.Logger) {
+	go func(count int64) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		err := h.userRepo.UpdateUserActiveRequestCount(
+			ctx,
+			&repository.UpdateUserActiveRequestCountOptions{
+				Language: language,
+				UID:      uid,
+				Count:    count,
+			},
+		)
+		if err != nil {
+			logger.Error("failed to update user active request count", "error", err)
+		}
+	}(count)
 }
