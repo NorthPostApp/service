@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"north-post/service/internal/domain/v1/models"
 	"north-post/service/internal/repository"
+	"north-post/service/internal/transport/http/v1/middleware"
 	"testing"
 	"time"
 
@@ -21,8 +22,8 @@ func setupAddressBookRouter(handler *AddressBookHandler, uid string, language st
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	group := r.Group("/user/address-book",
-		mockAuthMiddleware(uid),
-		mockLanguageMiddleware(language),
+		middleware.MockAuthMiddleware(uid),
+		middleware.MockLanguageMiddleware(language),
 	)
 	group.PATCH("", handler.UpdateSavedAddresses)
 	group.GET("", handler.GetSavedAddresses)
@@ -338,7 +339,7 @@ func TestGetRequestsByIDs(t *testing.T) {
 		uid                         string
 		language                    string
 		expectGetUserRequestsCall   bool
-		getUserRequestsOutput       *models.AddressRequests
+		getUserRequestsOutput       *models.UserAddressRequests
 		getUserRequestsError        error
 		expectedGetRequestByIDsCall bool
 		getRequestsByIDsOutput      *repository.GetRequestsByIDsResponse
@@ -352,7 +353,7 @@ func TestGetRequestsByIDs(t *testing.T) {
 			uid:                       "user_id",
 			language:                  "en",
 			expectGetUserRequestsCall: true,
-			getUserRequestsOutput: &models.AddressRequests{
+			getUserRequestsOutput: &models.UserAddressRequests{
 				IDs:                []string{"id_1", "id_2"},
 				ActiveRequestCount: 2},
 			getUserRequestsError:        nil,
@@ -370,7 +371,7 @@ func TestGetRequestsByIDs(t *testing.T) {
 			uid:                       "user_id",
 			language:                  "en",
 			expectGetUserRequestsCall: true,
-			getUserRequestsOutput: &models.AddressRequests{
+			getUserRequestsOutput: &models.UserAddressRequests{
 				IDs:                []string{"id_1", "id_2"},
 				ActiveRequestCount: 2},
 			getUserRequestsError:        nil,
@@ -389,7 +390,7 @@ func TestGetRequestsByIDs(t *testing.T) {
 			uid:                       "user_id",
 			language:                  "en",
 			expectGetUserRequestsCall: true,
-			getUserRequestsOutput: &models.AddressRequests{
+			getUserRequestsOutput: &models.UserAddressRequests{
 				IDs:                []string{"id_1", "id_2"},
 				ActiveRequestCount: 2},
 			getUserRequestsError:        nil,
@@ -434,7 +435,7 @@ func TestGetRequestsByIDs(t *testing.T) {
 			uid:                       "user_id",
 			language:                  "en",
 			expectGetUserRequestsCall: true,
-			getUserRequestsOutput: &models.AddressRequests{
+			getUserRequestsOutput: &models.UserAddressRequests{
 				IDs:                []string{"id_1", "id_2"},
 				ActiveRequestCount: 2},
 			getUserRequestsError:        nil,

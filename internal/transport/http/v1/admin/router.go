@@ -8,11 +8,12 @@ import (
 )
 
 type Handlers struct {
-	Address   *handlers.AddressHandler
-	Prompt    *handlers.PromptHandler
-	User      *handlers.UserHandler
-	Music     *handlers.MusicHandler
-	Typesense *handlers.TypesenseHandler
+	Address        *handlers.AddressHandler
+	AddressRequest *handlers.AddressRequestHandler
+	Prompt         *handlers.PromptHandler
+	User           *handlers.UserHandler
+	Music          *handlers.MusicHandler
+	Typesense      *handlers.TypesenseHandler
 }
 
 func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, middlewares *middleware.Middlewares) {
@@ -31,6 +32,10 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, middlewares *middlew
 			address.PUT("", h.Address.CreateNewAddress)
 			// DELETE
 			address.DELETE("/:id", h.Address.DeleteAddress)
+		}
+		addressRequest := admin.Group("/address-request")
+		{
+			addressRequest.GET("", middlewares.LanguageFromQuery, h.AddressRequest.GetRequestsByStatus)
 		}
 		prompt := admin.Group("/prompt")
 		{

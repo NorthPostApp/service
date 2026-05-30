@@ -9,6 +9,18 @@ const (
 	RequestStatusFailed     AddressRequestStatus = "failed"
 )
 
+func (s AddressRequestStatus) IsValid() bool {
+	switch s {
+	case RequestStatusPending,
+		RequestStatusProcessing,
+		RequestStatusCompleted,
+		RequestStatusFailed:
+		return true
+	default:
+		return false
+	}
+}
+
 type AddressRequest struct {
 	ID        string               `json:"id" firestore:"id"`
 	Content   string               `json:"content" firestore:"content"`

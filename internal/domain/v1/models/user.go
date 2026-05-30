@@ -20,7 +20,7 @@ type SavedAddresses struct {
 	IDs []string `json:"ids" firestore:"ids"`
 }
 
-type AddressRequests struct {
+type UserAddressRequests struct {
 	IDs                []string `json:"ids" firestore:"ids"`
 	ActiveRequestCount int64    `json:"activeRequestCount" firestore:"activeRequestCount"`
 }

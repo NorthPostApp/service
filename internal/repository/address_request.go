@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"cloud.google.com/go/firestore"
+	"google.golang.org/api/iterator"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -58,6 +59,16 @@ type GetRequestsByIDsResponse struct {
 	InvalidIDs          []string
 	Requests            []models.AddressRequest
 	ActiveRequestsCount int64
+}
+
+type GetRequestsByStatusOptions struct {
+	Language models.Language
+	Status   models.AddressRequestStatus
+}
+
+type GetRequestsByStatusResponse struct {
+	Requests   []models.AddressRequest
+	InvalidIDs []string
 }
 
 // Repo data processing functions
@@ -110,9 +121,7 @@ func (r *AddressRequestRepository) DeleteRequests(
 	return nil
 }
 
-// Next step:
-// 1. GetRequestByUser -> by ids -> update active request count
-// This function is for AppUser
+// This get method is for AppUsers
 func (r *AddressRequestRepository) GetRequestsByIDs(
 	ctx context.Context, opts *GetRequestsByIDsOptions) (*GetRequestsByIDsResponse, error) {
 	collectionName := getRequestCollectionName(opts.Language)
@@ -158,7 +167,47 @@ func (r *AddressRequestRepository) GetRequestsByIDs(
 	}, nil
 }
 
-// 2. GetRequestByAdmin -> by status
+// This get method is for Admin Dashboard
+func (r *AddressRequestRepository) GetRequestsByStatus(
+	ctx context.Context,
+	opts *GetRequestsByStatusOptions) (*GetRequestsByStatusResponse, error) {
+	collectionName := getRequestCollectionName(opts.Language)
+	logger := r.logger.With(
+		"path", "repository.address_request.GetRequestsByStatus",
+		"collection", collectionName,
+	)
+	if !opts.Status.IsValid() {
+		logger.Error("invalid status", "status", opts.Status)
+		return nil, fmt.Errorf("invalid status: %s", opts.Status)
+	}
+	collectionRef := r.client.Collection(collectionName)
+	iter := collectionRef.
+		Where("status", "==", opts.Status).
+		OrderBy("updatedAt", firestore.Desc).Documents(ctx)
+	invalidIDs := []string{}
+	requests := []models.AddressRequest{}
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			logger.Error("error getting requests", "error", err)
+			return nil, fmt.Errorf("error getting requests: %w", err)
+		}
+		var request models.AddressRequest
+		if err := doc.DataTo(&request); err != nil {
+			logger.Warn("failed to parse request", "id", doc.Ref.ID, "error", err)
+			invalidIDs = append(invalidIDs, doc.Ref.ID)
+			continue
+		}
+		requests = append(requests, request)
+	}
+	return &GetRequestsByStatusResponse{
+		Requests:   requests,
+		InvalidIDs: invalidIDs,
+	}, nil
+}
 
 // ---------- Special Use Cases: Cross-Repo Processing ---------
 func (r *AddressRequestRepository) CreateNewRequestWithLimit(
@@ -181,11 +230,11 @@ func (r *AddressRequestRepository) CreateNewRequestWithLimit(
 		Collection(addressRequestCollection).Doc(opts.Language.Get())
 	// transactional update to avoid race condition or abusive requests
 	err := r.client.RunTransaction(ctx, func(ctx context.Context, tx *firestore.Transaction) error {
-		var currentUserRequests models.AddressRequests
+		var currentUserRequests models.UserAddressRequests
 		doc, err := tx.Get(userRequestRef)
 		exists := true
 		if status.Code(err) == codes.NotFound {
-			currentUserRequests = models.AddressRequests{
+			currentUserRequests = models.UserAddressRequests{
 				IDs:                []string{},
 				ActiveRequestCount: 0,
 			}

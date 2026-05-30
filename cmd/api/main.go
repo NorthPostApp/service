@@ -120,6 +120,7 @@ func main() {
 	userMusicHandler := userHandlers.NewMusicHandler(musicService, logger)
 
 	userAddressBookHandler := userHandlers.NewAddressBookHandler(userRepo, addressRepo, addressRequestRepo, logger)
+	adminAddressRequestHandler := adminHandlers.NewAddressRequestHandler(addressRequestRepo, logger)
 
 	// Setup routers
 	router := gin.Default()
@@ -146,11 +147,12 @@ func main() {
 	middlewares := middleware.SetupMiddlewares(firebaseClient.Auth, logger)
 	admin.SetupAdminRouter(router_v1,
 		&admin.Handlers{
-			Address:   adminAddressHandler,
-			Prompt:    promptHandler,
-			User:      adminUserDataHandler,
-			Music:     adminMusicHandler,
-			Typesense: adminTypesenseHandler,
+			Address:        adminAddressHandler,
+			AddressRequest: adminAddressRequestHandler,
+			Prompt:         promptHandler,
+			User:           adminUserDataHandler,
+			Music:          adminMusicHandler,
+			Typesense:      adminTypesenseHandler,
 		},
 		middlewares)
 

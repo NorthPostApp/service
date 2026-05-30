@@ -25,6 +25,6 @@ type CreateNewRequestResponse struct {
 	Data string
 }
 
-type GetRequestByIDsResponse struct {
+type GetRequestsResponse struct {
 	Data []models.AddressRequest
 }
