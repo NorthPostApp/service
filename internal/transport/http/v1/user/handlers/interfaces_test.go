@@ -4,9 +4,7 @@ import (
 	"context"
 	"north-post/service/internal/domain/v1/models"
 	"north-post/service/internal/repository"
-	"north-post/service/internal/transport/http/v1/middleware"
 
-	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -61,12 +59,12 @@ func (m *mockUserRepo) UpdateUserAddressRequests(
 func (m *mockUserRepo) GetUserRequests(
 	ctx context.Context,
 	opts *repository.GetUserRequestsOptions,
-) (*models.AddressRequests, error) {
+) (*models.UserAddressRequests, error) {
 	args := m.Called(ctx, opts)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*models.AddressRequests), args.Error(1)
+	return args.Get(0).(*models.UserAddressRequests), args.Error(1)
 }
 func (m *mockUserRepo) UpdateUserActiveRequestCount(
 	ctx context.Context, opts *repository.UpdateUserActiveRequestCountOptions,
@@ -123,23 +121,4 @@ func (m *mockAddressRequestRepo) GetRequestsByIDs(
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*repository.GetRequestsByIDsResponse), args.Error(1)
-}
-
-// --------- Mock Utils ----------
-func mockAuthMiddleware(uid string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if uid != "" {
-			c.Set(middleware.UidKey, uid)
-		}
-		c.Next()
-	}
-}
-
-func mockLanguageMiddleware(language string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if language != "" {
-			c.Set(middleware.LanguageKey, language)
-		}
-		c.Next()
-	}
 }

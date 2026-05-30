@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"north-post/service/internal/domain/v1/models"
 	"north-post/service/internal/repository"
+	"north-post/service/internal/transport/http/v1/middleware"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +19,7 @@ import (
 func setupUserRouter(handler *UserHandler, uid string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
-	r.POST("/user/signin", mockAuthMiddleware(uid), handler.AuthenticateAppUser)
+	r.POST("/user/signin", middleware.MockAuthMiddleware(uid), handler.AuthenticateAppUser)
 	return r
 }
 

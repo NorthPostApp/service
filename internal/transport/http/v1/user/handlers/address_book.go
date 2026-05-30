@@ -182,7 +182,7 @@ func (h *AddressBookHandler) CreateNewRequest(c *gin.Context) {
 // @Param Authorization header string true "Bearer idToken"
 // @Param language query string true "Language code (e.g., en, zh)"
 // @Produce json
-// @Success 200 {object} dto.GetRequestByIDsResponse
+// @Success 200 {object} dto.GetRequestsResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /user/address-book/request [get]
@@ -224,7 +224,7 @@ func (h *AddressBookHandler) GetRequestsByIDs(c *gin.Context) {
 	if requests.ActiveRequestCount != requestData.ActiveRequestsCount {
 		h.asyncUpdateUserActiveRequestCount(uid, language, requestData.ActiveRequestsCount, logger)
 	}
-	c.JSON(http.StatusOK, dto.GetRequestByIDsResponse{Data: requestData.Requests})
+	c.JSON(http.StatusOK, dto.GetRequestsResponse{Data: requestData.Requests})
 }
 
 // ---------- Helper methods ----------

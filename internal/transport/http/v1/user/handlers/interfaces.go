@@ -25,7 +25,7 @@ type userRepository interface {
 	GetUserRequests(
 		ctx context.Context,
 		opts *repository.GetUserRequestsOptions,
-	) (*models.AddressRequests, error)
+	) (*models.UserAddressRequests, error)
 	UpdateUserActiveRequestCount(
 		ctx context.Context, opts *repository.UpdateUserActiveRequestCountOptions,
 	) error

@@ -273,7 +273,7 @@ func (u *UserRepository) UpdateUserSavedAddresses(
 // Get user's address requests ids with the given language
 func (u *UserRepository) GetUserRequests(
 	ctx context.Context,
-	opts *GetUserRequestsOptions) (*models.AddressRequests, error) {
+	opts *GetUserRequestsOptions) (*models.UserAddressRequests, error) {
 	tableName := appUserTable
 	logger := u.logger.With(
 		"path", "repository.user.GetUserRequestsIDs",
@@ -286,7 +286,7 @@ func (u *UserRepository) GetUserRequests(
 	doc, err := docRef.Get(ctx)
 	// if doc not existed, create one
 	if status.Code(err) == codes.NotFound {
-		newRequests := models.AddressRequests{IDs: []string{}, ActiveRequestCount: 0}
+		newRequests := models.UserAddressRequests{IDs: []string{}, ActiveRequestCount: 0}
 		err = createFirestorePath(
 			ctx,
 			docRef,
@@ -302,7 +302,7 @@ func (u *UserRepository) GetUserRequests(
 		logger.Error("failed to get user address requests doc", "error", err)
 		return nil, fmt.Errorf("failed to get user address request doc: %w", err)
 	}
-	var addressRequests models.AddressRequests
+	var addressRequests models.UserAddressRequests
 	if err := doc.DataTo(&addressRequests); err != nil {
 		logger.Error("failed to parse user address request doc", "error", err)
 		return nil, fmt.Errorf("failed to parse user address request doc: %w", err)
@@ -336,7 +336,7 @@ func (u *UserRepository) UpdateUserAddressRequests(
 		err = createFirestorePath(
 			ctx,
 			docRef,
-			models.AddressRequests{IDs: []string{}, ActiveRequestCount: 0})
+			models.UserAddressRequests{IDs: []string{}, ActiveRequestCount: 0})
 	}
 	if err != nil {
 		logger.Error("failed to update user address request", "error", err)
