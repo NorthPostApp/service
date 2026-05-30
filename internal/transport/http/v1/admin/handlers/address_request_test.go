@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"north-post/service/internal/domain/v1/models"
 	"north-post/service/internal/repository"
+	"north-post/service/internal/transport/http/v1/middleware"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -29,10 +30,12 @@ func (m *MockAddressRequestRepository) GetRequestsByStatus(
 	return args.Get(0).(*repository.GetRequestsByStatusResponse), args.Error(1)
 }
 
-func setupAddressRequestRouter(handler *AddressRequestHandler) *gin.Engine {
+func setupAddressRequestRouter(handler *AddressRequestHandler, language string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
-	group := r.Group("/admin/address-request")
+	group := r.Group("/admin/address-request",
+		middleware.MockLanguageMiddleware(language),
+	)
 	group.GET("", handler.GetRequestsByStatus)
 	return r
 }
@@ -90,7 +93,7 @@ func TestGetRequestsByStatus(t *testing.T) {
 				mockAddressRequestRepo,
 				slog.New(slog.NewTextHandler(io.Discard, nil)),
 			)
-			router := setupAddressRequestRouter(handler)
+			router := setupAddressRequestRouter(handler, tt.language)
 			if tt.expectedCall {
 				mockAddressRequestRepo.On("GetRequestsByStatus",
 					mock.Anything, mock.Anything).

@@ -176,6 +176,10 @@ func (r *AddressRequestRepository) GetRequestsByStatus(
 		"path", "repository.address_request.GetRequestsByStatus",
 		"collection", collectionName,
 	)
+	if opts == nil {
+		logger.Error("invalid nil options")
+		return nil, fmt.Errorf("options cannot be nil")
+	}
 	if !opts.Status.IsValid() {
 		logger.Error("invalid status", "status", opts.Status)
 		return nil, fmt.Errorf("invalid status: %s", opts.Status)
