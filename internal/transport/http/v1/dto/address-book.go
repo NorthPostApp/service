@@ -22,9 +22,9 @@ type CreateNewRequest struct {
 }
 
 type CreateNewRequestResponse struct {
-	Data string
+	Data string `json:"data"`
 }
 
 type GetRequestsResponse struct {
-	Data []models.AddressRequest
+	Data []models.AddressRequest `json:"data"`
 }
