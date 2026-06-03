@@ -71,6 +71,11 @@ type GetRequestsByStatusResponse struct {
 	InvalidIDs []string
 }
 
+// type UpdateRequestDataOptions struct {
+// 	Language models.Language
+// 	ID       string
+// }
+
 // Repo data processing functions
 
 func (r *AddressRequestRepository) DeleteRequests(
@@ -212,6 +217,30 @@ func (r *AddressRequestRepository) GetRequestsByStatus(
 		InvalidIDs: invalidIDs,
 	}, nil
 }
+
+// func (r *AddressRequestRepository) UpdateRequestData(ctx context.Context, opts *UpdateRequestDataOptions) error {
+// 	collectionName := getRequestCollectionName(opts.Language)
+// 	logger := r.logger.With("path", "repository.address_request.UpdateRequestData")
+// 	docRef := r.client.Collection(collectionName).Doc(opts.ID)
+// 	doc, err := docRef.Get(ctx)
+// 	if err != nil {
+// 		logger.Error("failed to get doc", "id", opts.ID, "error", err)
+// 		return fmt.Errorf("failed to get doc: %w", err)
+// 	}
+// 	var request models.AddressRequest
+// 	if err := doc.DataTo(&request); err != nil {
+// 		logger.Error("failed to parse request", "id", opts.ID, "error", err)
+// 		return fmt.Errorf("failed to parse request: %w", err)
+// 	}
+// 	newRequest := opts.UpdatedRequest
+// 	newRequest.ID = request.ID // avoid id pollution
+// 	newRequest.CreatedAt = request.CreatedAt
+// 	newRequest.UpdatedAt = time.Now().UnixMilli()
+// 	if newRequest.Status == models.RequestStatusPending {
+// 		newRequest.Status = models.RequestStatusProcessing
+// 	}
+// 	return nil
+// }
 
 // ---------- Special Use Cases: Cross-Repo Processing ---------
 func (r *AddressRequestRepository) CreateNewRequestWithLimit(

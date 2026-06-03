@@ -1,26 +1,41 @@
 package middleware
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
 
+	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 
 	"firebase.google.com/go/v4/auth"
 )
 
 const (
-	UidKey = "user_id"
+	UidKey          = "user_id"
+	adminCollection = "admin_users"
+	userCollection  = "app_users"
 )
 
-type authClient interface {
-	VerifyIDToken(c context.Context, idToken string) (*auth.Token, error)
-}
+type MiddlewareType int8
 
-func AuthMiddleware(auth authClient, logger *slog.Logger) gin.HandlerFunc {
+const (
+	AdminMiddleware MiddlewareType = iota
+	UserMiddleware
+)
+
+func AuthMiddleware(
+	middlewareType MiddlewareType,
+	auth *auth.Client,
+	db *firestore.Client,
+	logger *slog.Logger) gin.HandlerFunc {
+	var collectionName string
+	if middlewareType == AdminMiddleware {
+		collectionName = adminCollection
+	} else if middlewareType == UserMiddleware {
+		collectionName = userCollection
+	}
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		clientIP := c.ClientIP()
@@ -54,6 +69,18 @@ func AuthMiddleware(auth authClient, logger *slog.Logger) gin.HandlerFunc {
 			logger.Error("Failed to verify ID token", "error", err, "clientIP", clientIP)
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": err.Error(),
+			})
+			c.Abort()
+			return
+		}
+		if _, err := db.Collection(collectionName).Doc(authToken.UID).Get(c); err != nil {
+			logger.Error("invalid user group",
+				"uid", authToken.UID,
+				"err", err,
+				"clientIP", clientIP,
+			)
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "invalid user group",
 			})
 			c.Abort()
 			return
