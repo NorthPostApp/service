@@ -107,7 +107,10 @@ func (h *AddressRequestHandler) UpdateRequest(c *gin.Context) {
 		UpdatedRequest: req.UpdatedRequest,
 	}
 	if err := h.repo.UpdateRequestData(c.Request.Context(), opts); err != nil {
-		logger.Error("failed to update request data")
+		logger.Error(
+			"failed to update request data",
+			"error", err,
+		)
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}

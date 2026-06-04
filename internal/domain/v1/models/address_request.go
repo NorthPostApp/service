@@ -9,14 +9,6 @@ const (
 	RequestStatusFailed     AddressRequestStatus = "failed"
 )
 
-var EditableRequestFields = []string{
-	"status",
-	"pendingCandidates",
-	"failedReason",
-	"resolvedID",
-	"notes",
-}
-
 func (s AddressRequestStatus) IsValid() bool {
 	switch s {
 	case RequestStatusPending,
