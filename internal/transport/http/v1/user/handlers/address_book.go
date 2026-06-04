@@ -139,8 +139,6 @@ func (h *AddressBookHandler) CreateNewRequest(c *gin.Context) {
 		return
 	}
 
-	// check how many active request does this user have
-
 	// create new request
 	createRequestOpts := &repository.CreateRequestOptions{
 		Language: language,

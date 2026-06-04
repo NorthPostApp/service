@@ -71,10 +71,11 @@ type GetRequestsByStatusResponse struct {
 	InvalidIDs []string
 }
 
-// type UpdateRequestDataOptions struct {
-// 	Language models.Language
-// 	ID       string
-// }
+type UpdateRequestDataOptions struct {
+	Language       models.Language
+	ID             string
+	UpdatedRequest models.AddressRequest
+}
 
 // Repo data processing functions
 
@@ -218,29 +219,42 @@ func (r *AddressRequestRepository) GetRequestsByStatus(
 	}, nil
 }
 
-// func (r *AddressRequestRepository) UpdateRequestData(ctx context.Context, opts *UpdateRequestDataOptions) error {
-// 	collectionName := getRequestCollectionName(opts.Language)
-// 	logger := r.logger.With("path", "repository.address_request.UpdateRequestData")
-// 	docRef := r.client.Collection(collectionName).Doc(opts.ID)
-// 	doc, err := docRef.Get(ctx)
-// 	if err != nil {
-// 		logger.Error("failed to get doc", "id", opts.ID, "error", err)
-// 		return fmt.Errorf("failed to get doc: %w", err)
-// 	}
-// 	var request models.AddressRequest
-// 	if err := doc.DataTo(&request); err != nil {
-// 		logger.Error("failed to parse request", "id", opts.ID, "error", err)
-// 		return fmt.Errorf("failed to parse request: %w", err)
-// 	}
-// 	newRequest := opts.UpdatedRequest
-// 	newRequest.ID = request.ID // avoid id pollution
-// 	newRequest.CreatedAt = request.CreatedAt
-// 	newRequest.UpdatedAt = time.Now().UnixMilli()
-// 	if newRequest.Status == models.RequestStatusPending {
-// 		newRequest.Status = models.RequestStatusProcessing
-// 	}
-// 	return nil
-// }
+// update address request content
+func (r *AddressRequestRepository) UpdateRequestData(
+	ctx context.Context, opts *UpdateRequestDataOptions) error {
+	collectionName := getRequestCollectionName(opts.Language)
+	logger := r.logger.With(
+		"path", "repository.address_request.UpdateRequestData",
+		"language", opts.Language,
+		"id", opts.ID,
+	)
+	docRef := r.client.Collection(collectionName).Doc(opts.ID)
+	doc, err := docRef.Get(ctx)
+	if err != nil {
+		logger.Error("failed to get doc", "id", opts.ID, "error", err)
+		return fmt.Errorf("failed to get doc: %w", err)
+	}
+	var request models.AddressRequest
+	if err := doc.DataTo(&request); err != nil {
+		logger.Error("failed to parse request", "id", opts.ID, "error", err)
+		return fmt.Errorf("failed to parse request: %w", err)
+	}
+	newRequest := opts.UpdatedRequest
+	// avoid data pollution
+	newRequest.ID = request.ID
+	newRequest.RequestBy = request.RequestBy
+	newRequest.CreatedAt = request.CreatedAt
+	newRequest.UpdatedAt = time.Now().UnixMilli()
+	if newRequest.Status == models.RequestStatusPending {
+		newRequest.Status = models.RequestStatusProcessing
+	}
+	_, err = docRef.Set(ctx, newRequest)
+	if err != nil {
+		logger.Error("failed to update request", "error", err)
+		return fmt.Errorf("failed to update request: %w", err)
+	}
+	return nil
+}
 
 // ---------- Special Use Cases: Cross-Repo Processing ---------
 func (r *AddressRequestRepository) CreateNewRequestWithLimit(

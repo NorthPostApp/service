@@ -21,21 +21,18 @@ func SetupAdminRouter(router *gin.RouterGroup, h *Handlers, middlewares *middlew
 	{
 		address := admin.Group("/address")
 		{
-			// GET
 			address.GET("/tags", h.Address.GetAllTags)
-			// POST
 			address.POST("", h.Address.GetAddresses)
 			address.POST("/generate", h.Address.GenerateNewAddress)
 			address.POST("/update", h.Address.UpdateAddress)
 			address.POST("/sync", h.Address.SyncToTypesense)
-			// PUT
 			address.PUT("", h.Address.CreateNewAddress)
-			// DELETE
 			address.DELETE("/:id", h.Address.DeleteAddress)
 		}
 		addressRequest := admin.Group("/address-request")
 		{
 			addressRequest.GET("", middlewares.LanguageFromQuery, h.AddressRequest.GetRequestsByStatus)
+			addressRequest.POST("/update", middlewares.LanguageFromBody, h.AddressRequest.UpdateRequest)
 		}
 		prompt := admin.Group("/prompt")
 		{

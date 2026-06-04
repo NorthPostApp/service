@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +12,7 @@ import (
 	"net/http/httptest"
 	"north-post/service/internal/domain/v1/models"
 	"north-post/service/internal/repository"
+	"north-post/service/internal/transport/http/v1/dto"
 	"north-post/service/internal/transport/http/v1/middleware"
 	"testing"
 
@@ -30,6 +33,12 @@ func (m *MockAddressRequestRepository) GetRequestsByStatus(
 	return args.Get(0).(*repository.GetRequestsByStatusResponse), args.Error(1)
 }
 
+func (m *MockAddressRequestRepository) UpdateRequestData(
+	ctx context.Context, opts *repository.UpdateRequestDataOptions) error {
+	args := m.Called(ctx, opts)
+	return args.Error(0)
+}
+
 func setupAddressRequestRouter(handler *AddressRequestHandler, language string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
@@ -37,6 +46,7 @@ func setupAddressRequestRouter(handler *AddressRequestHandler, language string) 
 		middleware.MockLanguageMiddleware(language),
 	)
 	group.GET("", handler.GetRequestsByStatus)
+	group.POST("update", handler.UpdateRequest)
 	return r
 }
 
@@ -111,6 +121,73 @@ func TestGetRequestsByStatus(t *testing.T) {
 				assert.Contains(t, w.Body.String(), tt.mockGetRequestOutput.Requests[0].ID)
 			}
 			mockAddressRequestRepo.AssertExpectations(t)
+		})
+	}
+}
+
+func TestUpdateRequest(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name           string
+		id             string
+		language       string
+		expectedCall   bool
+		updatedRequest models.AddressRequest
+		expectedError  error
+		status         int
+	}{
+		{
+			name:           "success",
+			id:             "mockID",
+			language:       "zh",
+			expectedCall:   true,
+			updatedRequest: models.AddressRequest{ID: "mockID", Status: "processing"},
+			expectedError:  nil,
+			status:         http.StatusOK,
+		},
+		{
+			name:           "invalid status",
+			id:             "mockID",
+			language:       "zh",
+			expectedCall:   false,
+			updatedRequest: models.AddressRequest{ID: "mockID", Status: "mock"},
+			expectedError:  nil,
+			status:         http.StatusBadRequest,
+		},
+		{
+			name:           "failed response",
+			id:             "mockID",
+			language:       "zh",
+			expectedCall:   true,
+			updatedRequest: models.AddressRequest{ID: "mockID", Status: "completed"},
+			expectedError:  errors.New("failed"),
+			status:         http.StatusInternalServerError,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRequestRepo := new(MockAddressRequestRepository)
+			handler := NewAddressRequestHandler(
+				mockRequestRepo, slog.New(slog.NewTextHandler(io.Discard, nil)))
+			router := setupAddressRequestRouter(handler, tt.language)
+			if tt.expectedCall {
+				mockRequestRepo.On("UpdateRequestData", mock.Anything, mock.Anything).
+					Return(tt.expectedError).Once()
+			}
+			body, err := json.Marshal(dto.UpdateRequest{
+				Language:       models.Language(tt.language),
+				ID:             tt.id,
+				UpdatedRequest: tt.updatedRequest,
+			})
+			assert.NoError(t, err)
+			req, _ := http.NewRequest("POST", "/admin/address-request/update", bytes.NewBuffer(body))
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			if tt.expectedCall && tt.expectedError != nil {
+				assert.Contains(t, w.Body.String(), "error")
+			}
+			mockRequestRepo.AssertExpectations(t)
+			assert.Equal(t, tt.status, w.Code)
 		})
 	}
 }
