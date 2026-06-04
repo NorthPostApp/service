@@ -3,6 +3,7 @@ package middleware
 import (
 	"log/slog"
 
+	"firebase.google.com/go/v4/auth"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,10 +13,13 @@ type Middlewares struct {
 	Auth              gin.HandlerFunc
 }
 
-func SetupMiddlewares(auth authClient, logger *slog.Logger) *Middlewares {
+func SetupMiddlewares(
+	authType MiddlewareType,
+	auth *auth.Client,
+	logger *slog.Logger) *Middlewares {
 	return &Middlewares{
 		LanguageFromQuery: LanguageFromQueryMiddleware(logger),
 		LanguageFromBody:  LanguageFromBodyMiddleware(logger),
-		Auth:              AuthMiddleware(auth, logger),
+		Auth:              AuthMiddleware(authType, auth, logger),
 	}
 }

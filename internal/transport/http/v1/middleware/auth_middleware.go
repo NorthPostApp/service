@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -13,14 +12,21 @@ import (
 )
 
 const (
-	UidKey = "user_id"
+	UidKey     = "user_id"
+	adminClaim = "admin"
 )
 
-type authClient interface {
-	VerifyIDToken(c context.Context, idToken string) (*auth.Token, error)
-}
+type MiddlewareType int8
 
-func AuthMiddleware(auth authClient, logger *slog.Logger) gin.HandlerFunc {
+const (
+	AdminMiddleware MiddlewareType = iota
+	UserMiddleware
+)
+
+func AuthMiddleware(
+	middlewareType MiddlewareType,
+	auth *auth.Client,
+	logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		clientIP := c.ClientIP()
@@ -57,6 +63,23 @@ func AuthMiddleware(auth authClient, logger *slog.Logger) gin.HandlerFunc {
 			})
 			c.Abort()
 			return
+		}
+
+		// verify user group
+		if middlewareType == AdminMiddleware {
+			isAdmin, ok := authToken.Claims[adminClaim].(bool)
+			if !ok || !isAdmin {
+				logger.Error(
+					"invalid user group",
+					"uid", authToken.UID,
+					"clientIP", clientIP,
+				)
+				c.JSON(http.StatusForbidden, gin.H{
+					"error": "admin permission required group",
+				})
+				c.Abort()
+				return
+			}
 		}
 		c.Set(UidKey, authToken.UID)
 		c.Next()

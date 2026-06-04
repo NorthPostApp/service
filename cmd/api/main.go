@@ -144,7 +144,14 @@ func main() {
 	}
 	router_v1 := router.Group("/v1")
 
-	middlewares := middleware.SetupMiddlewares(firebaseClient.Auth, logger)
+	adminMiddlewares := middleware.SetupMiddlewares(
+		middleware.AdminMiddleware,
+		firebaseClient.Auth,
+		logger)
+	userMiddlewares := middleware.SetupMiddlewares(
+		middleware.UserMiddleware,
+		firebaseClient.Auth,
+		logger)
 	admin.SetupAdminRouter(router_v1,
 		&admin.Handlers{
 			Address:        adminAddressHandler,
@@ -154,7 +161,7 @@ func main() {
 			Music:          adminMusicHandler,
 			Typesense:      adminTypesenseHandler,
 		},
-		middlewares)
+		adminMiddlewares)
 
 	user.SetupUserRouter(router_v1,
 		&user.Handlers{
@@ -163,7 +170,7 @@ func main() {
 			Address:     userAddressHandler,
 			AddressBook: userAddressBookHandler,
 		},
-		middlewares)
+		userMiddlewares)
 
 	port := getPort()
 	logger.Info("starting server", "port", port)
