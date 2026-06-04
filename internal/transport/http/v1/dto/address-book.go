@@ -28,3 +28,9 @@ type CreateNewRequestResponse struct {
 type GetRequestsResponse struct {
 	Data []models.AddressRequest `json:"data"`
 }
+
+type UpdateRequest struct {
+	Language       models.Language       `json:"language"`
+	ID             string                `json:"id"`
+	UpdatedRequest models.AddressRequest `json:"updatedRequest"`
+}
