@@ -6,16 +6,14 @@ import (
 	"net/http"
 	"strings"
 
-	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
 
 	"firebase.google.com/go/v4/auth"
 )
 
 const (
-	UidKey          = "user_id"
-	adminCollection = "admin_users"
-	userCollection  = "app_users"
+	UidKey     = "user_id"
+	adminClaim = "admin"
 )
 
 type MiddlewareType int8
@@ -28,14 +26,7 @@ const (
 func AuthMiddleware(
 	middlewareType MiddlewareType,
 	auth *auth.Client,
-	db *firestore.Client,
 	logger *slog.Logger) gin.HandlerFunc {
-	var collectionName string
-	if middlewareType == AdminMiddleware {
-		collectionName = adminCollection
-	} else if middlewareType == UserMiddleware {
-		collectionName = userCollection
-	}
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		clientIP := c.ClientIP()
@@ -73,17 +64,22 @@ func AuthMiddleware(
 			c.Abort()
 			return
 		}
-		if _, err := db.Collection(collectionName).Doc(authToken.UID).Get(c); err != nil {
-			logger.Error("invalid user group",
-				"uid", authToken.UID,
-				"err", err,
-				"clientIP", clientIP,
-			)
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "invalid user group",
-			})
-			c.Abort()
-			return
+
+		// verify user group
+		if middlewareType == AdminMiddleware {
+			isAdmin, ok := authToken.Claims[adminClaim].(bool)
+			if !ok || !isAdmin {
+				logger.Error(
+					"invalid user group",
+					"uid", authToken.UID,
+					"clientIP", clientIP,
+				)
+				c.JSON(http.StatusForbidden, gin.H{
+					"error": "admin permission required group",
+				})
+				c.Abort()
+				return
+			}
 		}
 		c.Set(UidKey, authToken.UID)
 		c.Next()

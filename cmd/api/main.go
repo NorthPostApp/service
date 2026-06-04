@@ -147,12 +147,10 @@ func main() {
 	adminMiddlewares := middleware.SetupMiddlewares(
 		middleware.AdminMiddleware,
 		firebaseClient.Auth,
-		firebaseClient.Firestore,
 		logger)
 	userMiddlewares := middleware.SetupMiddlewares(
 		middleware.UserMiddleware,
 		firebaseClient.Auth,
-		firebaseClient.Firestore,
 		logger)
 	admin.SetupAdminRouter(router_v1,
 		&admin.Handlers{
