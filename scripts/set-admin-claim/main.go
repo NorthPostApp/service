@@ -33,15 +33,15 @@ func main() {
 	config := &firebase.Config{ProjectID: projectID}
 	app, err := firebase.NewApp(ctx, config)
 	if err != nil {
-		log.Fatalf("failed to initialize firebase: %w", err)
+		log.Fatalf("failed to initialize firebase: %v", err)
 	}
 	authClient, err := app.Auth(ctx)
 	if err != nil {
-		log.Fatalf("failed to get auth client: %w", err)
+		log.Fatalf("failed to get auth client: %v", err)
 	}
 	userRecord, err := authClient.GetUser(ctx, *uid)
 	if err != nil {
-		log.Fatalf("failed to get user %q: %w", *uid, err)
+		log.Fatalf("failed to get user %q: %v", *uid, err)
 	}
 	claims := userRecord.CustomClaims
 	if claims == nil {
