@@ -34,9 +34,11 @@ func (m *MockAddressRequestRepository) GetRequestsByStatus(
 }
 
 func (m *MockAddressRequestRepository) UpdateRequestData(
-	ctx context.Context, opts *repository.UpdateRequestDataOptions) error {
+	ctx context.Context, opts *repository.UpdateRequestDataOptions) (
+	*models.AddressRequest,
+	error) {
 	args := m.Called(ctx, opts)
-	return args.Error(0)
+	return args.Get(0).(*models.AddressRequest), args.Error(1)
 }
 
 func setupAddressRequestRouter(handler *AddressRequestHandler, language string) *gin.Engine {
@@ -132,7 +134,7 @@ func TestUpdateRequest(t *testing.T) {
 		id             string
 		language       string
 		expectedCall   bool
-		updatedRequest models.AddressRequest
+		updatedRequest *models.AddressRequest
 		expectedError  error
 		status         int
 	}{
@@ -141,7 +143,7 @@ func TestUpdateRequest(t *testing.T) {
 			id:             "mockID",
 			language:       "zh",
 			expectedCall:   true,
-			updatedRequest: models.AddressRequest{ID: "mockID", Status: "processing"},
+			updatedRequest: &models.AddressRequest{ID: "mockID", Status: "processing"},
 			expectedError:  nil,
 			status:         http.StatusOK,
 		},
@@ -150,7 +152,7 @@ func TestUpdateRequest(t *testing.T) {
 			id:             "mockID",
 			language:       "zh",
 			expectedCall:   false,
-			updatedRequest: models.AddressRequest{ID: "mockID", Status: "mock"},
+			updatedRequest: &models.AddressRequest{ID: "mockID", Status: "mock"},
 			expectedError:  nil,
 			status:         http.StatusBadRequest,
 		},
@@ -159,7 +161,7 @@ func TestUpdateRequest(t *testing.T) {
 			id:             "mockID",
 			language:       "zh",
 			expectedCall:   true,
-			updatedRequest: models.AddressRequest{ID: "mockID", Status: "completed"},
+			updatedRequest: &models.AddressRequest{ID: "mockID", Status: "completed"},
 			expectedError:  errors.New("failed"),
 			status:         http.StatusInternalServerError,
 		},
@@ -172,12 +174,12 @@ func TestUpdateRequest(t *testing.T) {
 			router := setupAddressRequestRouter(handler, tt.language)
 			if tt.expectedCall {
 				mockRequestRepo.On("UpdateRequestData", mock.Anything, mock.Anything).
-					Return(tt.expectedError).Once()
+					Return(tt.updatedRequest, tt.expectedError).Once()
 			}
 			body, err := json.Marshal(dto.UpdateRequest{
 				Language:       models.Language(tt.language),
 				ID:             tt.id,
-				UpdatedRequest: tt.updatedRequest,
+				UpdatedRequest: *tt.updatedRequest,
 			})
 			assert.NoError(t, err)
 			req, _ := http.NewRequest("POST", "/admin/address-request/update", bytes.NewBuffer(body))

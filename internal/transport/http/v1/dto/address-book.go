@@ -34,3 +34,7 @@ type UpdateRequest struct {
 	ID             string                `json:"id"`
 	UpdatedRequest models.AddressRequest `json:"updatedRequest"`
 }
+
+type UpdateRequestResponse struct {
+	Data models.AddressRequest `json:"data"`
+}
