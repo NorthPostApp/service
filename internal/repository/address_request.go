@@ -221,7 +221,7 @@ func (r *AddressRequestRepository) GetRequestsByStatus(
 
 // update address request content
 func (r *AddressRequestRepository) UpdateRequestData(
-	ctx context.Context, opts *UpdateRequestDataOptions) error {
+	ctx context.Context, opts *UpdateRequestDataOptions) (*models.AddressRequest, error) {
 	collectionName := getRequestCollectionName(opts.Language)
 	logger := r.logger.With(
 		"path", "repository.address_request.UpdateRequestData",
@@ -232,12 +232,12 @@ func (r *AddressRequestRepository) UpdateRequestData(
 	doc, err := docRef.Get(ctx)
 	if err != nil {
 		logger.Error("failed to get doc", "id", opts.ID, "error", err)
-		return fmt.Errorf("failed to get doc: %w", err)
+		return nil, fmt.Errorf("failed to get doc: %w", err)
 	}
 	var request models.AddressRequest
 	if err := doc.DataTo(&request); err != nil {
 		logger.Error("failed to parse request", "id", opts.ID, "error", err)
-		return fmt.Errorf("failed to parse request: %w", err)
+		return nil, fmt.Errorf("failed to parse request: %w", err)
 	}
 	newRequest := opts.UpdatedRequest
 	// avoid data pollution
@@ -251,9 +251,9 @@ func (r *AddressRequestRepository) UpdateRequestData(
 	_, err = docRef.Set(ctx, newRequest)
 	if err != nil {
 		logger.Error("failed to update request", "error", err)
-		return fmt.Errorf("failed to update request: %w", err)
+		return nil, fmt.Errorf("failed to update request: %w", err)
 	}
-	return nil
+	return &newRequest, nil
 }
 
 // ---------- Special Use Cases: Cross-Repo Processing ---------

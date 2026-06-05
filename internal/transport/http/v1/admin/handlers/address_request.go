@@ -20,7 +20,7 @@ type addressRequestRepository interface {
 		ctx context.Context,
 		opts *repository.GetRequestsByStatusOptions) (*repository.GetRequestsByStatusResponse, error)
 	UpdateRequestData(
-		ctx context.Context, opts *repository.UpdateRequestDataOptions) error
+		ctx context.Context, opts *repository.UpdateRequestDataOptions) (*models.AddressRequest, error)
 }
 
 type AddressRequestHandler struct {
@@ -83,7 +83,7 @@ func (h *AddressRequestHandler) GetRequestsByStatus(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body dto.UpdateRequest true "Request body"
-// @Success 200 {object} map[string]string
+// @Success 200 {object} dto.UpdateRequestResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /admin/address-request/update [post]
@@ -106,7 +106,8 @@ func (h *AddressRequestHandler) UpdateRequest(c *gin.Context) {
 		ID:             req.ID,
 		UpdatedRequest: req.UpdatedRequest,
 	}
-	if err := h.repo.UpdateRequestData(c.Request.Context(), opts); err != nil {
+	updatedRequest, err := h.repo.UpdateRequestData(c.Request.Context(), opts)
+	if err != nil {
 		logger.Error(
 			"failed to update request data",
 			"error", err,
@@ -114,5 +115,5 @@ func (h *AddressRequestHandler) UpdateRequest(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{Error: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": "succeeded"})
+	c.JSON(http.StatusOK, dto.UpdateRequestResponse{Data: *updatedRequest})
 }
